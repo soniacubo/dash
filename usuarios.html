@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Servidores (Usuários)</title>
+    <style>
+
+
+
+/* Largura das colunas da tabela de usuários */
+.tabela-usuarios-col-data {
+    width: 130px;
+    min-width: 130px;
+    text-align: center;
+}
+
+.tabela-usuarios-col-numero {
+    width: 110px;
+    min-width: 110px;
+    text-align: center;
+}
+
+.tabela-usuarios-col-login {
+    width: 140px;
+    min-width: 140px;
+    text-align: center;
+}
+
+.tabela-usuarios-col-despacho {
+    width: 120px;
+    min-width: 120px;
+    text-align: center;
+}
+
+        .th-sortable-user {
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+}
+
+.th-sortable-user::after {
+    content: "⇅";
+    font-size: 12px;
+    color: #2563eb;
+    position: absolute;
+    right: 6px;
+    opacity: 0.6;
+}
+
+.th-sortable-user.sort-asc::after {
+    content: "▲";
+}
+
+.th-sortable-user.sort-desc::after {
+    content: "▼";
+}
+
+        /* =======================================================
+            ESTILOS GLOBAIS E ESTRUTURA (UNIÃO DE ESTILOS)
+        ========================================================== */
+
+        /* Ajuste do Body: Fundo para contraste e remoção de margem padrão */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 30px;
+            color: #222;
+            background-color: #f0f3f7;
+        }
+
+        /* Estilo do Container Principal (Box Branca Centralizada) */
+        .main-container {
+            max-width: 1500px;
+            width: 100%;
+            margin: 40px auto;
+            padding: 24px;
+            background-color: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+            border: 1px solid #e5e7eb;
+            overflow: hidden;
+        }
+
+        /* NAV SUPERIOR AJUSTADA */
+        .top-nav {
+            width: 100%;
+            background: #ffffff;
+            padding: 16px 24px;
+            border-radius: 14px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, .06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            /* permite logo esquerda + menu centro */
+        }
+
+        /* LOGO */
+        .top-logo {
+            height: 45px;
+            opacity: .95;
+            margin-right: 20px;
+        }
+
+        .top-nav-left,
+        .top-nav-right {
+            width: 180px;
+            /* cria equilíbrio visual para centralizar o menu */
+            display: flex;
+            align-items: center;
+        }
+
+        .top-nav-center {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* MENU */
+        .top-nav-items {
+            display: flex;
+            gap: 32px;
+        }
+
+
+        .nav-item {
+            font-size: 15px;
+            color: #555;
+            text-decoration: none;
+            padding: 6px 14px;
+            border-radius: 8px;
+            transition: 0.25s;
+            white-space: nowrap;
+        }
+
+        .nav-item:hover {
+            background: #f3f7ff;
+            color: #2563eb;
+        }
+
+        .nav-item.active {
+            background: #e6f0ff;
+            color: #2563eb;
+            font-weight: 600;
+        }
+
+        /* Seção geral (Bloco de conteúdo com borda e sombra) */
+        .dash-section {
+            margin: 24px 0;
+            padding: 20px 24px;
+            border-radius: 16px;
+            background: #ffffff;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+            border: 1px solid #e5e7eb;
+        }
+
+        /* Removendo a sombra e borda quando a dash-section é usada apenas para agrupar */
+        .dash-section.no-shadow {
+            box-shadow: none;
+            border: none;
+            padding: 0;
+            margin: 0;
+            background: transparent;
+        }
+
+        /* --- TÍTULOS --- */
+        h1 {
+            color: #007bff;
+            font-size: 1.5em;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            color: #111827;
+            font-size: 1.45rem;
+            /* Ajuste para ser o mesmo tamanho do Painel de Setores */
+            font-weight: 700;
+            margin-top: 0;
+            margin-bottom: 25px;
+        }
+
+        h3 {
+            color: #111827;
+            font-size: 1.25em;
+            font-weight: 600;
+            margin-top: 25px;
+            margin-bottom: 16px;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #e0e0e0;
+            margin: 30px 0;
+        }
+
+
+        /* =======================================================
+            FILTRO E CARDS DE CONTAGEM
+        ========================================================== */
+
+        .filter-panel {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            align-items: center;
+            padding: 15px 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background-color: #f7f9fb;
+        }
+
+        .filter-panel input,
+        .filter-panel button {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+
+        .btn-primary {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            background-color: #1d4ed8;
+        }
+
+        .card-deck {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .user-stat-card {
+            padding: 20px;
+            border: 1px solid #dcdcdc;
+            border-radius: 12px;
+            text-align: center;
+            background-color: #ffffff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s, box-shadow 0.3s;
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+
+        .user-stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-stat-card strong {
+            display: block;
+            font-size: 2.2em;
+            color: #2563eb;
+            margin-top: 5px;
+            font-weight: 700;
+        }
+
+        /* =======================================================
+            RANKING E GRÁFICOS
+        ========================================================== */
+
+        .section-content-flex {
+            display: flex;
+            gap: 40px;
+            margin-top: 30px;
+        }
+
+        .ranking-box {
+            flex: 1;
+            min-width: 45%;
+        }
+
+        .ranking-list {
+            list-style-type: none;
+            counter-reset: ranking-counter;
+            padding: 0;
+            margin-top: 10px;
+        }
+
+        .ranking-list li {
+            counter-increment: ranking-counter;
+            padding: 10px 0;
+            border-bottom: 1px dashed #eee;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            color: #111827;
+        }
+
+        .ranking-list li::before {
+            content: counter(ranking-counter);
+            font-weight: 700;
+            color: #007bff;
+            font-size: 1.2em;
+            min-width: 25px;
+            text-align: center;
+            margin-right: 15px;
+        }
+
+        .ranking-list li:nth-child(1)::before {
+            color: #f59e0b;
+        }
+
+        .ranking-list li:nth-child(2)::before {
+            color: #9ca3af;
+        }
+
+        .ranking-list li:nth-child(3)::before {
+            color: #b45309;
+        }
+
+        .chart-container {
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            background-color: #fcfcfc;
+            height: 300px;
+        }
+
+        /* =======================================================
+            TABELA
+        ========================================================== */
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .table thead th {
+            padding: 12px;
+            background-color: #e6f0ff;
+            color: #2563eb;
+            text-align: left;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border-bottom: 2px solid #b3d9ff;
+        }
+
+        .table tbody td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+            font-size: 0.95rem;
+        }
+
+        .table tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .table tbody tr:hover {
+            background-color: #f0f8ff;
+        }
+
+        .text-success {
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        .text-danger {
+            color: #ef4444;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="main-container">
+
+        <div class="top-nav">
+            <div class="top-nav-left">
+                <img src="cc.png" class="top-logo" alt="Cidade Conectada">
+            </div>
+
+            <div class="top-nav-center">
+                <div class="top-nav-items">
+                    <a href="visaogeral.html" class="nav-item">Visão Geral</a>
+                    <a href="setores.html" class="nav-item">Setores</a>
+                    <a href="usuarios.html" class="nav-item active">Usuários</a>
+                    <a href="solicitacoes.html" class="nav-item">Solicitações</a>
+                    <a href="avaliacoes.html" class="nav-item">Avaliações</a>
+                    <a href="agendamentos.html" class="nav-item">Agendamentos</a>
+                </div>
+            </div>
+
+            <div class="top-nav-right"></div>
+        </div>
+
+        <section class="dash-section" style="margin-bottom: 20px;">
+            <div
+                style="display: flex; justify-content: center; position: relative; align-items: center; text-align: center; padding: 12px 0;">
+                <div style="display: flex; align-items: center; gap: 16px;">
+
+                    <div>
+                        <h2 style="margin: 0; font-size: 1.45rem; font-weight: 700;">
+                            Análise de Usuários (Servidores)
+                        </h2>
+                        <p style="margin: 0; margin-top: 4px; font-size: 0.9rem; color: #6b7280;"></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <div class="card-deck" id="user-counters">
+    <div class="user-stat-card">
+        Total de Servidores:
+        <strong id="card-total-servidores">—</strong>
+    </div>
+
+    <div class="user-stat-card">
+        Ativos últimas 24h:
+        <strong id="card-ativos-24h">—</strong>
+    </div>
+
+    <div class="user-stat-card">
+        Inativos há mais de 30 dias:
+        <strong id="card-inativos-30d">—</strong>
+    </div>
+
+    <div class="user-stat-card">
+        Online Agora:
+        <strong id="card-online-agora">—</strong>
+    </div>
+
+    <div class="user-stat-card">
+        Criados no último mês:
+        <strong id="card-criados-ultimo-mes">—</strong>
+    </div>
+</div>
+
+
+        <!-- ====== GRÁFICOS PRINCIPAIS ====== -->
+        <section class="dash-section" style="margin-top: 10px;">
+            <div class="section-content-flex">
+
+                <!-- GRÁFICO DE LOGIN (ESQUERDA) -->
+                <div class="ranking-box" style="flex:1;">
+                    <h3>Última vez que realizou login (Distribuição)</h3>
+                    <p style="font-size: 0.9rem; color: #6b7280;">Do total de usuários... quem fez login quando.</p>
+
+                    <div class="chart-container" style="height: 330px;">
+                        <canvas id="loginTimeChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- SERVIDORES POR SETOR (DIREITA) -->
+                <div class="ranking-box" style="flex:1;">
+                    <h3>📍 Servidores por Setor</h3>
+                    <p style="font-size: 0.9rem; color: #6b7280;">Distribuição dos servidores ativos por setor.</p>
+
+                    <div class="chart-container" style="height: 330px;">
+                        <canvas id="servidoresPorSetorChart"></canvas>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <style>
+            .login-distribuicao-card {
+                padding: 15px 20px;
+            }
+
+            .grafico-titulo {
+                font-size: 18px;
+                font-weight: 600;
+                margin-bottom: 2px;
+            }
+
+            .grafico-sub {
+                font-size: 12px;
+                color: #666;
+            }
+
+            .grafico-container {
+                margin-top: 12px;
+                background: #ffffff;
+                padding: 18px 22px;
+                border-radius: 14px;
+                box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+            }
+
+            .card-grafico {
+                background: #fff;
+                padding: 20px 25px;
+                border-radius: 14px;
+                box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+                margin-top: 25px;
+            }
+
+            .titulo-grafico {
+                font-size: 18px;
+                font-weight: 600;
+                margin-bottom: 20px;
+                color: #333;
+            }
+
+            .th-sortable {
+                cursor: pointer;
+                position: relative;
+                user-select: none;
+            }
+
+            .th-sortable:hover {
+                background-color: #dbeafe;
+            }
+
+            .th-sortable::after {
+                content: "⇅";
+                font-size: 12px;
+                color: #2563eb;
+                position: absolute;
+                right: 8px;
+                opacity: 0.6;
+            }
+        </style>
+
+
+<style>
+    #ranking-despachos li {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 5px;
+        border-bottom: 1px dashed #ddd;
+        font-size: 1rem;
+    }
+    #ranking-despachos li strong {
+        color: #2563eb;
+    }
+
+    /* Container centralizado */
+.ranking-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 25px;
+}
+
+/* Título */
+.ranking-title {
+    margin-bottom: 20px;
+    font-weight: 600;
+    font-size: 20px;
+    color: #1f2937;
+}
+
+/* Caixa do gráfico */
+.ranking-chart-wrapper {
+    width: 70%;               /* <<< controla o tamanho */
+    max-width: 900px;
+    min-width: 350px;
+    height: 420px;            /* <<< altura do gráfico */
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(15,23,42,0.06);
+    border: 1px solid #e5e7eb;
+    padding: 25px;
+}
+/* Container centralizado */
+.ranking-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 25px;
+}
+
+/* Título */
+.ranking-title {
+    margin-bottom: 20px;
+    font-weight: 600;
+    font-size: 20px;
+    color: #1f2937;
+}
+
+/* Caixa do gráfico */
+.ranking-chart-wrapper {
+    width: 70%;
+    max-width: 900px;
+    min-width: 350px;
+    height: 420px;
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(15,23,42,0.06);
+    border: 1px solid #e5e7eb;
+    padding: 25px;
+    margin-bottom: 20px;
+}
+
+/* Filtro */
+.ranking-filter {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.ranking-filter input, .ranking-filter button {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+}
+
+</style>
+<!-- ===================== RANKING GRÁFICO DE DESPACHOS ===================== -->
+<!-- RANKING DE DESPACHOS -->
+<div class="ranking-container">
+    <h3 class="ranking-title">🏆 Top 10 Servidores Mais Ativos (Despachos)</h3>
+
+    <div class="ranking-chart-wrapper">
+        <canvas id="rankingDespachosChart"></canvas>
+    </div>
+
+    <div class="ranking-filter">
+        <label>Data Inicial:</label>
+        <input type="date" id="rankStartDate">
+        <label>Data Final:</label>
+        <input type="date" id="rankEndDate">
+        <button id="applyRankFilter">Filtrar</button>
+    </div>
+</div>
+
+
+        
+        <section class="dash-section">
+            <h3>Lista Detalhada de Usuários</h3>
+            <table id="tabela-usuarios" class="table">
+<thead>
+    <tr>
+        <th class="th-sortable-user" data-column="nome">Nome</th>
+
+        <th class="th-sortable-user" data-column="secretaria">Secretaria</th>
+
+        <th class="th-sortable-user tabela-usuarios-col-data" data-column="created_at">
+            Data Cadastro
+        </th>
+
+        <th class="th-sortable-user tabela-usuarios-col-login" data-column="last_login_at">
+            Último Login
+        </th>
+;;;
+        <th class="th-sortable-user tabela-usuarios-col-numero" data-column="dias_sem_login">
+            Dias sem Login
+        </th>
+
+        <th class="th-sortable-user tabela-usuarios-col-despacho" data-column="despachos_periodo">
+            Despachos
+        </th>
+    </tr>
+</thead>
+
+
+              
+                <tbody id="tabela-usuarios-body">       </tbody>
+
+              
+            </table>
+        </section>
+
+        <hr>
+
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+   
+    <script>
+        async function carregarGraficoUltimoLogin() {
+            try {
+                const response = await fetch("http://localhost:3000/api/indicadores/login-distribuicao");
+                const dados = await response.json();
+
+                const labels = [
+                    "Fez login hoje",
+                    "Fez login ontem",
+                    "Últimos 7 dias",
+                    "7 a 15 dias",
+                    "15 a 30 dias",
+                    "Mais de 30 dias",
+                    "Nunca logou"
+                ];
+
+                const valores = [
+                    dados.loginHoje,
+                    dados.loginOntem,
+                    dados.loginUltimos7,
+                    dados.login7a15,
+                    dados.login15a30,
+                    dados.loginMais30,
+                    dados.nuncaLogou
+                ];
+
+                const total = dados.totalUsuarios;
+
+                const porcentagens = valores.map(v =>
+                    total > 0 ? ((v / total) * 100).toFixed(1) : 0
+                );
+
+                const ctx = document.getElementById("loginTimeChart").getContext("2d");
+
+                new Chart(ctx, {
+                    type: "bar",
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: "% dos servidores",
+                            data: porcentagens,
+                            backgroundColor: "rgba(37, 99, 235, 0.55)",
+                            borderColor: "rgba(37, 99, 235, 1)",
+                            borderWidth: 1,
+                            borderRadius: 8,
+                            borderSkipped: false
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',   // ← GRÁFICO HORIZONTAL
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: (ctx) =>
+                                        `${valores[ctx.dataIndex]} usuários (${porcentagens[ctx.dataIndex]}%)`
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: value => value + "%"
+                                },
+                                grid: { color: "#e5e7eb" }
+                            },
+                            y: {
+                                ticks: {
+                                    color: "#111827",
+                                    font: { size: 13 }
+                                },
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+
+            } catch (error) {
+                console.error("Erro ao carregar o gráfico de login:", error);
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", carregarGraficoUltimoLogin);
+    </script>
+
+    <script>
+        async function carregarGraficoServidoresPorSetor() {
+            try {
+                const response = await fetch("http://localhost:3000/api/indicadores/servidores-por-setor");
+                const dados = await response.json();
+
+                const labels = dados.map(item => item.setor);
+                const valores = dados.map(item => item.total_usuarios);
+
+                const cores = [
+                    "#2563eb", "#1d4ed8", "#3b82f6",
+                    "#60a5fa", "#93c5fd", "#bfdbfe",
+                    "#a5b4fc", "#818cf8", "#6366f1"
+                ];
+
+                const ctx = document.getElementById("servidoresPorSetorChart").getContext("2d");
+
+                new Chart(ctx, {
+                    type: "pie",
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: valores,
+                            backgroundColor: cores,
+                            borderColor: "#ffffff",
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: {
+                            animateScale: true,
+                            animateRotate: true,
+                            duration: 900,
+                            easing: "easeOutQuart"
+                        },
+                        plugins: {
+                            legend: {
+                                position: "bottom",
+                                labels: {
+                                    font: { size: 13 },
+                                    color: "#111827"
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function (ctx) {
+                                        let label = ctx.label;
+                                        let valor = ctx.raw;
+                                        return `${label}: ${valor} servidores`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+            } catch (error) {
+                console.error("Erro gráfico servidores por setor:", error);
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", carregarGraficoServidoresPorSetor);
+    </script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="app.js"></script>
+
+</body>
+
+</html>
