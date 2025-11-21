@@ -3,6 +3,7 @@ const mysql = require("mysql2/promise");
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const path = require("path");
 require("dotenv").config();
 
 const app = express();
@@ -23,6 +24,7 @@ app.use(helmet());
 app.set("trust proxy", 1);
 app.use(rateLimit({ windowMs: 60 * 1000, max: 300 }));
 app.use(express.json());
+app.use(express.static(path.join(__dirname), { maxAge: process.env.STATIC_MAXAGE || "1d", etag: true }));
 
 const logger = {
   info: (msg, meta) => console.log(JSON.stringify({ level: "info", msg, ...meta })),
@@ -959,45 +961,7 @@ app.get("/api/visao-geral/cidadaos-resumo", async (req, res) => {
     res.status(500).json({ error: "Falha ao carregar resumo de cidadãos" });
   }
 });
-app.get("/api/visao-geral/evolucao-uso", async (req, res) => {
-  try {
-    const sql = `
-      SELECT
-        DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n MONTH), '%Y-%m-01') AS mes_iso,
-
-        /* Abertas no mês pela created_at */
-        (
-          SELECT COUNT(*)
-          FROM jp_conectada.solicitations s
-          WHERE s.tenant_id = ?
-            AND s.created_at >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n MONTH), '%Y-%m-01')
-            AND s.created_at <  DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n-1 MONTH), '%Y-%m-01')
-        ) AS abertas,
-
-        /* Concluídas no mês pela updated_at com status = 1  */
-        (
-          SELECT COUNT(*)
-          FROM jp_conectada.solicitations s2
-          WHERE s2.tenant_id = 1
-            AND s2.status = 1
-            AND s2.updated_at >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n MONTH), '%Y-%m-01')
-            AND s2.updated_at <  DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n-1 MONTH), '%Y-%m-01')
-        ) AS concluidas
-      FROM (
-        SELECT 11 AS n UNION ALL SELECT 10 UNION ALL SELECT 9 UNION ALL SELECT 8 UNION ALL
-        SELECT 7 UNION ALL SELECT 6 UNION ALL SELECT 5 UNION ALL SELECT 4 UNION ALL
-        SELECT 3 UNION ALL SELECT 2 UNION ALL SELECT 1 UNION ALL SELECT 0
-      ) seq
-      ORDER BY DATE(mes_iso);
-    `;
-
-    const [rows] = await db.query(sql, [TENANT_ID, TENANT_ID]);
-    res.json(rows);
-  } catch (err) {
-    console.error("Evolução erro:", err);
-    res.status(500).json({ error: "Falha ao carregar evolução de uso" });
-  }
-});
+/* rota duplicada removida: /api/visao-geral/evolucao-uso */
 
 
 

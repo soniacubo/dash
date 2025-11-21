@@ -1,5 +1,5 @@
 // visao.js (compatível com seu server.js atual)
-const API = "http://localhost:3000";
+const API_BASE_URL = `${window.location.origin}/api`;
 const fmt = new Intl.NumberFormat("pt-BR");
 let evolucaoChart = null;
 
@@ -10,7 +10,7 @@ const fmtR$ = (n) => `R$ ${fmt.format(Number(n || 0))}`;
 /* 1) KPIs principais */
 async function carregarContadores() {
   try {
-    const r = await fetch(`${API}/api/visao-geral/contadores`);
+    const r = await fetch(`${API_BASE_URL}/visao-geral/contadores`);
     const k = await r.json();
 
     setText("vg-servicos",      fmt.format(k.total_servicos || 0));
@@ -31,7 +31,7 @@ async function carregarContadores() {
 /* 2) Cidadãos (homens, mulheres, idade média) */
 async function carregarCidadaosResumo() {
   try {
-    const r = await fetch(`${API}/api/visao-geral/cidadaos-resumo`);
+    const r = await fetch(`${API_BASE_URL}/visao-geral/cidadaos-resumo`);
     const c = await r.json();
     setText("vg-cidadaos-homens",  fmt.format(c.homens || 0));
     setText("vg-cidadaos-mulheres",fmt.format(c.mulheres || 0));
@@ -44,7 +44,7 @@ async function carregarCidadaosResumo() {
 
 /* 3) Evolução de uso (últimos 12 meses) */
 async function carregarEvolucaoUso() {
-  const r = await fetch(`${API}/api/visao-geral/evolucao-uso`);
+  const r = await fetch(`${API_BASE_URL}/visao-geral/evolucao-uso`);
   const data = await r.json();
 
   const labels = data.map(d => {
@@ -110,7 +110,7 @@ async function carregarEvolucaoUso() {
 /* 4) Economia por ano/mês (usa apenas as 3 colunas retornadas hoje) */
 async function carregarEconomiaAno(ano) {
   try {
-    const r = await fetch(`${API}/api/visao-geral/economia?ano=${ano}`);
+    const r = await fetch(`${API_BASE_URL}/visao-geral/economia?ano=${ano}`);
     const rows = await r.json();
 
     const tbody = document.getElementById("vg-periodo-body");
