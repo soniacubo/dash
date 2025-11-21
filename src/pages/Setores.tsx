@@ -25,6 +25,11 @@ export default function Setores(){
   const [rankQualidade, setRankQualidade] = useState<any[]>([]);
   const fmt = useMemo(() => new Intl.NumberFormat("pt-BR"), []);
   const [expandedRoot, setExpandedRoot] = useState<Record<number, boolean>>({});
+  const [openUsersSectorId, setOpenUsersSectorId] = useState<number | null>(null);
+  const [usersLoading, setUsersLoading] = useState<boolean>(false);
+  const [usersBySector, setUsersBySector] = useState<Record<number, any[]>>({});
+  const cacheRef = useMemo(() => new Map<number, { data: any[]; ts: number }>(), []);
+  const debounceRef = useMemo(() => ({ t: 0 as any }), []);
 
   useEffect(() => {
     async function loadTree(){
@@ -64,28 +69,55 @@ export default function Setores(){
     loadQualidade();
   }, []);
 
+  function toggleRoot(rootId: number){
+    setExpandedRoot(prev => ({ ...prev, [rootId]: !(prev[rootId] ?? true) }));
+  }
+
+  function showSectorUsers(id: number){
+    if (debounceRef.t) clearTimeout(debounceRef.t);
+    debounceRef.t = setTimeout(async () => {
+      setOpenUsersSectorId(id);
+      const cached = cacheRef.get(id);
+      const fresh = cached && (Date.now() - cached.ts) < 5 * 60 * 1000;
+      if (fresh) {
+        setUsersBySector(prev => ({ ...prev, [id]: cached!.data }));
+        setUsersLoading(false);
+        return;
+      }
+      try {
+        setUsersLoading(true);
+        const r = await fetch(`${API_BASE_URL}/setores/${id}/usuarios`);
+        const data = await r.json();
+        cacheRef.set(id, { data, ts: Date.now() });
+        setUsersBySector(prev => ({ ...prev, [id]: data }));
+      } finally {
+        setUsersLoading(false);
+      }
+    }, 250);
+  }
+
   return (
-    <div className="main-container">
-      <div className="top-nav">
+    <main className="main-container">
+      <header className="top-nav" role="banner">
         <div className="top-nav-left">
           <img src="/cc.png" className="top-logo" alt="Cidade Conectada" />
         </div>
-        <div className="top-nav-center">
+        <nav className="top-nav-center" aria-label="Navegação principal">
           <div className="top-nav-items">
             <Link to="/visaogeral" className="nav-item">Visão Geral</Link>
             <Link to="/setores" className="nav-item active">Setores</Link>
             <Link to="/usuarios" className="nav-item">Usuários</Link>
           </div>
-        </div>
+        </nav>
         <div className="top-nav-right" />
-      </div>
+      </header>
 
       <section className="dash-section">
         <div className="dash-section-header"><h2>Rankings de Setores</h2></div>
         <div className="rankings-grid">
           <div className="ranking-card">
             <div className="ranking-card-header">
-              <button className="info-tooltip" data-tooltip="Setores com maior número de servidores vinculados">i</button>
+              <button className="info-tooltip" aria-label="Setores com maior número de servidores vinculados" data-tooltip="Setores com maior número de servidores vinculados">i</button>
               <strong>Setores com mais usuários</strong>
             </div>
             <ol className="ranking-list">
@@ -101,7 +133,7 @@ export default function Setores(){
 
           <div className="ranking-card">
             <div className="ranking-card-header">
-              <button className="info-tooltip" data-tooltip="Percentual de solicitações concluídas por setor">i</button>
+              <button className="info-tooltip" aria-label="Percentual de solicitações concluídas por setor" data-tooltip="Percentual de solicitações concluídas por setor">i</button>
               <strong>Eficiência por setor</strong>
             </div>
             <ol className="ranking-list">
@@ -117,7 +149,7 @@ export default function Setores(){
 
           <div className="ranking-card">
             <div className="ranking-card-header">
-              <button className="info-tooltip" data-tooltip="Nota média das avaliações dos serviços associados a cada setor">i</button>
+              <button className="info-tooltip" aria-label="Nota média das avaliações dos serviços associados a cada setor" data-tooltip="Nota média das avaliações dos serviços associados a cada setor">i</button>
               <strong>Qualidade média</strong>
             </div>
             <ol className="ranking-list">
@@ -138,12 +170,12 @@ export default function Setores(){
         <table id="tabela-setores">
           <thead>
             <tr>
-              <th className="th-tooltip">
+              <th className="th-tooltip" tabIndex={0} scope="col">
                 Setor
                 <div className="th-tooltip-text">Hierarquia organizacional</div>
               </th>
-              <th style={{textAlign:"center"}}>Serviços principais</th>
-              <th style={{textAlign:"center"}}>Serviços participantes</th>
+              <th style={{textAlign:"center"}} scope="col">Serviços principais</th>
+              <th style={{textAlign:"center"}} scope="col">Serviços participantes</th>
             </tr>
           </thead>
           <tbody>
@@ -155,23 +187,63 @@ export default function Setores(){
               const rootId = Number(String(r.path||"").split(",")[0]||"0");
               const visible = isRoot || expandedRoot[rootId] === true;
               return (
-                <tr key={r.sector_id} className={(r.nivel ?? 0) === 0 ? "nivel-0" : ""} style={{ display: visible ? undefined : "none" }}>
-                  <td>
-                    {isRoot ? (
-                      <span className="toggle" onClick={()=>setExpandedRoot(prev=>({ ...prev, [rootId]: !(prev[rootId] ?? true) }))}>
-                        {expandedRoot[rootId] ? "▾" : "▸"}
-                      </span>
-                    ) : null}
-                    <span style={{marginLeft: indent}}>{r.setor}</span>
-                  </td>
-                  <td style={{textAlign:"center"}}>{fmt.format(Number(principal||0))}</td>
-                  <td style={{textAlign:"center"}}>{fmt.format(Number(participante||0))}</td>
-                </tr>
+                <>
+                  <tr key={r.sector_id} className={(r.nivel ?? 0) === 0 ? "nivel-0" : ""} style={{ display: visible ? undefined : "none" }}>
+                    <td>
+                      {isRoot ? (
+                        <button
+                          className="toggle"
+                          aria-expanded={(expandedRoot[rootId] ?? true) ? "true" : "false"}
+                          onClick={()=>toggleRoot(rootId)}
+                          title={expandedRoot[rootId] ? "Recolher" : "Expandir"}
+                        >
+                          {expandedRoot[rootId] ? "▼" : "▶"}
+                        </button>
+                      ) : null}
+                      <span style={{marginLeft: indent}}>{r.setor}</span>
+                      <button
+                        className="info-tooltip"
+                        aria-label="Ver usuários do setor"
+                        onMouseEnter={()=>showSectorUsers(r.sector_id)}
+                        onFocus={()=>showSectorUsers(r.sector_id)}
+                        onClick={()=>showSectorUsers(r.sector_id)}
+                        style={{ marginLeft: 8 }}
+                      >i</button>
+                    </td>
+                    <td style={{textAlign:"center"}}>{fmt.format(Number(principal||0))}</td>
+                    <td style={{textAlign:"center"}}>{fmt.format(Number(participante||0))}</td>
+                  </tr>
+                  {openUsersSectorId === r.sector_id && (
+                    <tr key={`${r.sector_id}-users`} className="hidden-row" style={{ display: "table-row", background: "#f9fafb" }}>
+                      <td colSpan={3}>
+                        {usersLoading ? (
+                          <div>Carregando usuários...</div>
+                        ) : (
+                          <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                            {(usersBySector[r.sector_id] || []).map((u: any) => (
+                              <li key={u.id} style={{ padding: "6px 0", borderBottom: "1px dashed #e5e7eb" }}>
+                                <strong>{u.nome || "—"}</strong>
+                                <span style={{ color: "#6b7280", marginLeft: 8 }}>{u.email || ""}</span>
+                                {u.phone ? <span style={{ color: "#6b7280", marginLeft: 8 }}>{u.phone}</span> : null}
+                              </li>
+                            ))}
+                            {!(usersBySector[r.sector_id] || []).length && (
+                              <li style={{ color: "#6b7280" }}>Nenhum usuário vinculado.</li>
+                            )}
+                          </ul>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </>
               );
             })}
           </tbody>
         </table>
       </section>
-    </div>
+      <footer style={{marginTop:20,textAlign:"center",fontSize:12,color:"#6b7280"}}>
+        Cidade Conectada — BI Dashboard
+      </footer>
+    </main>
   );
 }

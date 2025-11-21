@@ -80,6 +80,11 @@ body {
     background: #f3f7ff;
     color: #2563eb;
 }
+.nav-item:focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: 2px;
+    border-radius: 8px;
+}
 
 .nav-item.active {
     background: #e6f0ff;
@@ -216,6 +221,10 @@ body {
     font-size: .9rem;
 }
 #btnToggleAll:hover { background: #1b4fb1; }
+.btn-primary:focus-visible, .info-tooltip:focus-visible, .toggle:focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: 2px;
+}
 
 /* =======================================================
    TABELA SETORES
@@ -335,6 +344,11 @@ td {
     visibility: visible;
     opacity: 1;
 }
+.th-tooltip:focus .th-tooltip-text,
+.th-tooltip:focus-within .th-tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
 
 
 /* ==================================
@@ -381,6 +395,11 @@ td {
 
 .info-tooltip:hover::after,
 .info-tooltip:hover::before {
+    opacity: 1;
+    visibility: visible;
+}
+.info-tooltip:focus::after,
+.info-tooltip:focus::before {
     opacity: 1;
     visibility: visible;
 }

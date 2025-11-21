@@ -82,12 +82,12 @@ export default function Visaogeral(){
   }, [anoSel, fmt]);
 
   return (
-    <div className="main-container">
-      <div className="top-nav">
+    <main className="main-container">
+      <header className="top-nav" role="banner">
         <div className="top-nav-left">
           <img src="/cc.png" className="top-logo" alt="Cidade Conectada" />
         </div>
-        <div className="top-nav-center">
+        <nav className="top-nav-center" aria-label="Navegação principal">
           <div className="top-nav-items">
             <Link to="/visaogeral" className="nav-item active">Visão Geral</Link>
             <Link to="/setores" className="nav-item">Setores</Link>
@@ -96,9 +96,9 @@ export default function Visaogeral(){
             <a href="#" className="nav-item">Avaliações</a>
             <a href="#" className="nav-item">Agendamentos</a>
           </div>
-        </div>
+        </nav>
         <div className="top-nav-right" />
-      </div>
+      </header>
 
       <section className="dash-section" style={{marginBottom:20}}>
         <div style={{display:"flex",justifyContent:"center",alignItems:"center",textAlign:"center",padding:"12px 0"}}>
@@ -109,8 +109,9 @@ export default function Visaogeral(){
         </div>
       </section>
 
-      <section className="dash-section">
+      <section className="dash-section" aria-labelledby="kpi-title">
         <div className="card-deck" id="vg-kpis">
+          <h2 id="kpi-title" className="sr-only">Indicadores principais</h2>
           <div className="user-stat-card">
             Eficiência média
             <strong id="vg-eficiencia">—%</strong>
@@ -149,10 +150,10 @@ export default function Visaogeral(){
         </div>
       </section>
 
-      <section className="dash-section" style={{marginTop:10}}>
+      <section className="dash-section" style={{marginTop:10}} aria-labelledby="evolucao-title">
         <div className="section-content-flex">
           <div className="ranking-box" style={{flex:1}}>
-            <h3>Evolução de uso (últimos 12 meses)</h3>
+            <h3 id="evolucao-title">Evolução de uso (últimos 12 meses)</h3>
             <p style={{fontSize: ".9rem", color: "#6b7280"}}>Volume mensal de solicitações/processos</p>
             <div className="chart-container" style={{height:330}}>
               <canvas ref={evolucaoRef}></canvas>
@@ -161,8 +162,8 @@ export default function Visaogeral(){
         </div>
       </section>
 
-      <section className="dash-section">
-        <h3>Resumo de Economia</h3>
+      <section className="dash-section" aria-labelledby="economia-title">
+        <h3 id="economia-title">Resumo de Economia</h3>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
           <div className="periodo-title"><span className="dot"></span><strong>Dados do Período — Ano:</strong></div>
           <select className="year-select" value={String(anoSel)} onChange={(e)=>setAnoSel(Number(e.target.value))}>
@@ -173,9 +174,9 @@ export default function Visaogeral(){
           <table className="periodo-table">
             <thead>
               <tr className="top-head">
-                <th>Período</th>
-                <th>Solicitações</th>
-                <th>💰 Economia Gerada</th>
+                <th scope="col">Período</th>
+                <th scope="col">Solicitações</th>
+                <th scope="col">💰 Economia Gerada</th>
               </tr>
             </thead>
             <tbody>
@@ -195,6 +196,9 @@ export default function Visaogeral(){
           </table>
         </div>
       </section>
-    </div>
+      <footer style={{marginTop:20,textAlign:"center",fontSize:12,color:"#6b7280"}}>
+        Cidade Conectada — BI Dashboard
+      </footer>
+    </main>
   );
 }

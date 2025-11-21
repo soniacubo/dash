@@ -73,20 +73,20 @@ export default function Usuarios(){
   }
 
   return (
-    <div className="main-container">
-      <div className="top-nav">
+    <main className="main-container">
+      <header className="top-nav" role="banner">
         <div className="top-nav-left">
           <img src="/cc.png" className="top-logo" alt="Cidade Conectada" />
         </div>
-        <div className="top-nav-center">
+        <nav className="top-nav-center" aria-label="Navegação principal">
           <div className="top-nav-items">
             <Link to="/visaogeral" className="nav-item">Visão Geral</Link>
             <Link to="/setores" className="nav-item">Setores</Link>
             <Link to="/usuarios" className="nav-item active">Usuários</Link>
           </div>
-        </div>
+        </nav>
         <div className="top-nav-right" />
-      </div>
+      </header>
 
       <section className="dash-section" style={{marginBottom:20}}>
         <div style={{display:"flex",justifyContent:"center",alignItems:"center",textAlign:"center",padding:"12px 0"}}>
@@ -125,6 +125,9 @@ export default function Usuarios(){
           <canvas ref={despachosRef}></canvas>
         </div>
       </section>
-    </div>
+      <footer style={{marginTop:20,textAlign:"center",fontSize:12,color:"#6b7280"}}>
+        Cidade Conectada — BI Dashboard
+      </footer>
+    </main>
   );
 }
