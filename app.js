@@ -2,7 +2,13 @@
     VARIÁVEIS DE ESTADO E INICIALIZAÇÃO
 ============================================================ */
 
-const API_BASE_URL = `${window.location.origin}/api`;
+function resolveApiBase(){
+  const loc = window.location;
+  const origin = loc.origin || `${loc.protocol}//${loc.host}`;
+  if (origin.includes(":3000")) return `${origin}/api`;
+  return `${loc.protocol}//${loc.hostname}:3000/api`;
+}
+const API_BASE_URL = resolveApiBase();
 
 /* ============================================================
     CARDS DE ESTATÍSTICAS DE USUÁRIOS

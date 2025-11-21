@@ -1,5 +1,11 @@
 // visao.js (compatível com seu server.js atual)
-const API_BASE_URL = `${window.location.origin}/api`;
+function resolveApiBase(){
+  const loc = window.location;
+  const origin = loc.origin || `${loc.protocol}//${loc.host}`;
+  if (origin.includes(":3000")) return `${origin}/api`;
+  return `${loc.protocol}//${loc.hostname}:3000/api`;
+}
+const API_BASE_URL = resolveApiBase();
 const fmt = new Intl.NumberFormat("pt-BR");
 let evolucaoChart = null;
 
