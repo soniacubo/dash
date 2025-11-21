@@ -1,19 +1,44 @@
 const express = require("express");
 const mysql = require("mysql2/promise");
 const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+const path = require("path");
+require("dotenv").config();
 
 const app = express();
-app.use(cors());
+
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "").split(",").map(s => s.trim()).filter(Boolean);
+const corsOptions = {
+  origin: function (origin, callback) {
+    const isDev = process.env.NODE_ENV !== "production";
+    if (!origin && isDev) return callback(null, true);
+    if (allowedOrigins.length === 0) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true
+};
+app.use(cors(corsOptions));
+app.use(helmet());
+app.set("trust proxy", 1);
+app.use(rateLimit({ windowMs: 60 * 1000, max: 300 }));
 app.use(express.json());
+app.use(express.static(path.join(__dirname), { maxAge: process.env.STATIC_MAXAGE || "1d", etag: true }));
+
+const logger = {
+  info: (msg, meta) => console.log(JSON.stringify({ level: "info", msg, ...meta })),
+  error: (msg, meta) => console.error(JSON.stringify({ level: "error", msg, ...meta }))
+};
 
 /* ============================================================
    🔥 CONEXÃO COM MYSQL
 ============================================================ */
 const db = mysql.createPool({
-  host: "cidadeconectadards-homolog.cyejysmhmdpe.sa-east-1.rds.amazonaws.com",
-  user: "ccproduser",
-  password: "CBGb3tE08bHD84r55m4lnA3Pq5T4TMa6",
-  database: "jp_conectada",
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
 });
@@ -23,6 +48,20 @@ function brToMySQL(dateBR) {
     if (!dateBR) return null;
     const [dia, mes, ano] = dateBR.split("/");
     return `${ano}-${mes}-${dia}`;
+}
+
+function isISODate(str) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(str);
+}
+
+function validateDateRange(start, end) {
+  if (!start || !end) return { ok: false, reason: "Missing dates" };
+  if (!isISODate(start) || !isISODate(end)) return { ok: false, reason: "Invalid format" };
+  const s = new Date(`${start}T00:00:00`);
+  const e = new Date(`${end}T23:59:59`);
+  if (isNaN(s) || isNaN(e)) return { ok: false, reason: "Invalid date" };
+  if (s > e) return { ok: false, reason: "Start after end" };
+  return { ok: true, start, end };
 }
 
 
@@ -441,11 +480,18 @@ app.get("/api/indicadores/servidores-por-setor", async (req, res) => {
 app.get("/api/usuarios/detalhado", async (req, res) => {
   try {
     const { dataInicial, dataFinal } = req.query;
-    const tenantId = 1; // AJUSTE SE NECESSÁRIO
+    const tenantId = 1;
 
-    // Normaliza datas para o formato completo
-    const dataIni = dataInicial ? `${dataInicial} 00:00:00` : null;
-    const dataFim = dataFinal ? `${dataFinal} 23:59:59` : null;
+    let dataIni = null;
+    let dataFim = null;
+    if (dataInicial && dataFinal) {
+      const v = validateDateRange(dataInicial, dataFinal);
+      if (!v.ok) {
+        return res.status(400).json({ error: "Parâmetros de data inválidos" });
+      }
+      dataIni = `${v.start} 00:00:00`;
+      dataFim = `${v.end} 23:59:59`;
+    }
 
     const sql = `
 WITH RECURSIVE sector_hierarchy AS (
@@ -532,7 +578,7 @@ ORDER BY u.first_name, u.last_name;
     res.json(rows);
 
   } catch (err) {
-    console.error("Erro ao carregar usuários detalhados:", err);
+    logger.error("Erro ao carregar usuários detalhados", { error: String(err) });
     res.status(500).json({ error: "Erro ao consultar usuários" });
   }
 });
@@ -593,8 +639,6 @@ app.get("/api/usuarios/estatisticas", async (req, res) => {
   }
 });
 app.get("/api/ranking-despachos", async (req, res) => {
-
-      console.log("Datas recebidas:", req.query);   // <<< AQUI
     try {
         const tenantId = 1;
 
@@ -603,12 +647,14 @@ app.get("/api/ranking-despachos", async (req, res) => {
         let filtro = "";
         let params = [];
 
-        // Se recebeu datas
         if (dataInicial && dataFinal) {
+            const v = validateDateRange(dataInicial, dataFinal);
+            if (!v.ok) {
+              return res.status(400).json({ error: "Parâmetros de data inválidos" });
+            }
             filtro = ` AND t.created_at BETWEEN ? AND ? `;
-            params.push(dataInicial, dataFinal);
+            params.push(v.start, v.end);
         } else {
-            // Últimos 30 dias
             filtro = ` AND t.created_at >= NOW() - INTERVAL 30 DAY `;
         }
 
@@ -631,7 +677,7 @@ app.get("/api/ranking-despachos", async (req, res) => {
         res.json(rows);
 
     } catch (error) {
-        console.error("Erro ranking:", error);
+        logger.error("Erro ranking", { error: String(error) });
         res.status(500).json({ error: "Erro ao carregar ranking de despachos" });
     }
 });
@@ -915,45 +961,7 @@ app.get("/api/visao-geral/cidadaos-resumo", async (req, res) => {
     res.status(500).json({ error: "Falha ao carregar resumo de cidadãos" });
   }
 });
-app.get("/api/visao-geral/evolucao-uso", async (req, res) => {
-  try {
-    const sql = `
-      SELECT
-        DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n MONTH), '%Y-%m-01') AS mes_iso,
-
-        /* Abertas no mês pela created_at */
-        (
-          SELECT COUNT(*)
-          FROM jp_conectada.solicitations s
-          WHERE s.tenant_id = ?
-            AND s.created_at >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n MONTH), '%Y-%m-01')
-            AND s.created_at <  DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n-1 MONTH), '%Y-%m-01')
-        ) AS abertas,
-
-        /* Concluídas no mês pela updated_at com status = 1  */
-        (
-          SELECT COUNT(*)
-          FROM jp_conectada.solicitations s2
-          WHERE s2.tenant_id = 1
-            AND s2.status = 1
-            AND s2.updated_at >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n MONTH), '%Y-%m-01')
-            AND s2.updated_at <  DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n-1 MONTH), '%Y-%m-01')
-        ) AS concluidas
-      FROM (
-        SELECT 11 AS n UNION ALL SELECT 10 UNION ALL SELECT 9 UNION ALL SELECT 8 UNION ALL
-        SELECT 7 UNION ALL SELECT 6 UNION ALL SELECT 5 UNION ALL SELECT 4 UNION ALL
-        SELECT 3 UNION ALL SELECT 2 UNION ALL SELECT 1 UNION ALL SELECT 0
-      ) seq
-      ORDER BY DATE(mes_iso);
-    `;
-
-    const [rows] = await db.query(sql, [TENANT_ID, TENANT_ID]);
-    res.json(rows);
-  } catch (err) {
-    console.error("Evolução erro:", err);
-    res.status(500).json({ error: "Falha ao carregar evolução de uso" });
-  }
-});
+/* rota duplicada removida: /api/visao-geral/evolucao-uso */
 
 
 
@@ -1009,6 +1017,7 @@ app.get("/api/visao-geral/economia", async (req, res) => {
 /* ============================================================
    🔥 INICIA SERVIDOR
 ============================================================ */
-app.listen(3000, () => {
-  console.log("Servidor rodando em http://localhost:3000");
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  logger.info("Servidor iniciado", { port: PORT });
 });
