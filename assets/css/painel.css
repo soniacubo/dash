@@ -281,7 +281,7 @@ td {
     opacity: 0;
     position: absolute;
     background: #fff;
-    border: 1px solid #ddd;
+    border: none;
     padding: 10px;
     border-radius: 6px;
     width: 260px;
@@ -306,6 +306,11 @@ td {
     font-weight: 700;
     cursor: default;
     font-size: .82rem;
+    border: none;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    box-shadow: none;
 }
 
 /* Cores desempenho */
@@ -327,7 +332,7 @@ td {
     opacity: 0;
     transition: opacity .25s;
     background: #fff;
-    border: 1px solid #d1d5db;
+    border: none;
     padding: 8px 12px;
     border-radius: 6px;
     position: absolute;
@@ -387,7 +392,7 @@ td {
     transform: translateX(-50%);
     border-width: 6px;
     border-style: solid;
-    border-color: #111827 transparent transparent transparent;
+    border-color: transparent;
     opacity: 0;
     visibility: hidden;
     transition: opacity .25s;

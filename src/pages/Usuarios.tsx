@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import Header from "../components/Header";
 import { useEffect, useRef, useState } from "react";
 import { API_BASE_URL } from "../app";
 import Chart from "chart.js/auto";
@@ -74,19 +74,7 @@ export default function Usuarios(){
 
   return (
     <main className="main-container">
-      <header className="top-nav" role="banner">
-        <div className="top-nav-left">
-          <img src="/cc.png" className="top-logo" alt="Cidade Conectada" />
-        </div>
-        <nav className="top-nav-center" aria-label="Navegação principal">
-          <div className="top-nav-items">
-            <Link to="/visaogeral" className="nav-item">Visão Geral</Link>
-            <Link to="/setores" className="nav-item">Setores</Link>
-            <Link to="/usuarios" className="nav-item active">Usuários</Link>
-          </div>
-        </nav>
-        <div className="top-nav-right" />
-      </header>
+      <Header />
 
       <section className="dash-section" style={{marginBottom:20}}>
         <div style={{display:"flex",justifyContent:"center",alignItems:"center",textAlign:"center",padding:"12px 0"}}>

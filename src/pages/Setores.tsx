@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import Header from "../components/Header";
 import { useEffect, useMemo, useState } from "react";
 import { API_BASE_URL } from "../app";
 
@@ -16,6 +16,10 @@ type SetorRow = {
   servicos_principal_consolidado?: number;
   servicos_participante_consolidado?: number;
   path?: string;
+  solicitacoes_total?: number;
+  solicitacoes_concluidas?: number;
+  solicitacoes_respondidas?: number;
+  qualidade_total_avaliacoes?: number;
 };
 
 export default function Setores(){
@@ -23,6 +27,7 @@ export default function Setores(){
   const [rankUsuarios, setRankUsuarios] = useState<any[]>([]);
   const [rankEficiencia, setRankEficiencia] = useState<any[]>([]);
   const [rankQualidade, setRankQualidade] = useState<any[]>([]);
+  const [rankServicos, setRankServicos] = useState<any[]>([]);
   const fmt = useMemo(() => new Intl.NumberFormat("pt-BR"), []);
   const [expandedRoot, setExpandedRoot] = useState<Record<number, boolean>>({});
   const [openUsersSectorId, setOpenUsersSectorId] = useState<number | null>(null);
@@ -63,11 +68,34 @@ export default function Setores(){
       const top = [...data].sort((a,b)=> (b.nota_media||0) - (a.nota_media||0)).slice(0,5);
       setRankQualidade(top);
     }
+    async function montarTopServicos(){
+      const rows = treeRows.filter(r => (r.nivel ?? 0) === 0);
+      const agreg = rows.map(r => ({
+        sector_id: r.sector_id,
+        setor: r.setor,
+        total_servicos: Number(r.servicos_principal_consolidado||0) + Number(r.servicos_participante_consolidado||0)
+      }));
+      const top = agreg.sort((a,b)=> (b.total_servicos||0) - (a.total_servicos||0)).slice(0,5);
+      setRankServicos(top);
+    }
     loadTree();
     loadUsuarios();
     loadEficiencia();
     loadQualidade();
+    // top serviços depende de treeRows já carregado; aguarda microtask
+    setTimeout(montarTopServicos, 0);
   }, []);
+
+  useEffect(() => {
+    const rows = treeRows.filter(r => (r.nivel ?? 0) === 0);
+    const agreg = rows.map(r => ({
+      sector_id: r.sector_id,
+      setor: r.setor,
+      total_servicos: Number(r.servicos_principal_consolidado||0) + Number(r.servicos_participante_consolidado||0)
+    }));
+    const top = agreg.sort((a,b)=> (b.total_servicos||0) - (a.total_servicos||0)).slice(0,5);
+    setRankServicos(top);
+  }, [treeRows]);
 
   function toggleRoot(rootId: number){
     setExpandedRoot(prev => ({ ...prev, [rootId]: !(prev[rootId] ?? true) }));
@@ -98,32 +126,21 @@ export default function Setores(){
 
   return (
     <main className="main-container">
-      <header className="top-nav" role="banner">
-        <div className="top-nav-left">
-          <img src="/cc.png" className="top-logo" alt="Cidade Conectada" />
-        </div>
-        <nav className="top-nav-center" aria-label="Navegação principal">
-          <div className="top-nav-items">
-            <Link to="/visaogeral" className="nav-item">Visão Geral</Link>
-            <Link to="/setores" className="nav-item active">Setores</Link>
-            <Link to="/usuarios" className="nav-item">Usuários</Link>
-          </div>
-        </nav>
-        <div className="top-nav-right" />
-      </header>
+      <Header />
 
       <section className="dash-section">
         <div className="dash-section-header"><h2>Rankings de Setores</h2></div>
         <div className="rankings-grid">
           <div className="ranking-card">
             <div className="ranking-card-header">
-              <button className="info-tooltip" aria-label="Setores com maior número de servidores vinculados" data-tooltip="Setores com maior número de servidores vinculados">i</button>
+              <span className="ranking-icon">👥</span>
               <strong>Setores com mais usuários</strong>
+              <button className="info-tooltip" aria-label="Setores com maior número de servidores vinculados" data-tooltip="Setores com maior número de servidores vinculados">i</button>
             </div>
             <ol className="ranking-list">
               {rankUsuarios.map((x, idx) => (
                 <li className="ranking-item" key={x.sector_id || idx}>
-                  <span className={`ranking-item-pos pos-${idx+1}`}>{idx+1}</span>
+                  <span className={`ranking-item-pos pos-${idx+1}`}></span>
                   <span className="ranking-item-nome">{x.setor || x.sector_title || x.title || "—"}</span>
                   <span className="ranking-item-valor">{fmt.format(Number(x.total_geral_root||x.usuarios_total||0))}</span>
                 </li>
@@ -133,13 +150,14 @@ export default function Setores(){
 
           <div className="ranking-card">
             <div className="ranking-card-header">
-              <button className="info-tooltip" aria-label="Percentual de solicitações concluídas por setor" data-tooltip="Percentual de solicitações concluídas por setor">i</button>
+              <span className="ranking-icon">⚡</span>
               <strong>Eficiência por setor</strong>
+              <button className="info-tooltip" aria-label="Percentual de solicitações concluídas por setor" data-tooltip="Percentual de solicitações concluídas por setor">i</button>
             </div>
             <ol className="ranking-list">
               {rankEficiencia.map((x, idx) => (
                 <li className="ranking-item" key={x.sector_id || idx}>
-                  <span className={`ranking-item-pos pos-${idx+1}`}>{idx+1}</span>
+                  <span className={`ranking-item-pos pos-${idx+1}`}></span>
                   <span className="ranking-item-nome">{x.sector_title || x.setor || "—"}</span>
                   <span className="ranking-item-valor">{Number(x.eficiencia_percentual||0).toFixed(1)}%</span>
                 </li>
@@ -149,15 +167,33 @@ export default function Setores(){
 
           <div className="ranking-card">
             <div className="ranking-card-header">
-              <button className="info-tooltip" aria-label="Nota média das avaliações dos serviços associados a cada setor" data-tooltip="Nota média das avaliações dos serviços associados a cada setor">i</button>
+              <span className="ranking-icon">⭐</span>
               <strong>Qualidade média</strong>
+              <button className="info-tooltip" aria-label="Nota média das avaliações dos serviços associados a cada setor" data-tooltip="Nota média das avaliações dos serviços associados a cada setor">i</button>
             </div>
             <ol className="ranking-list">
               {rankQualidade.map((x, idx) => (
                 <li className="ranking-item" key={x.sector_id || idx}>
-                  <span className={`ranking-item-pos pos-${idx+1}`}>{idx+1}</span>
+                  <span className={`ranking-item-pos pos-${idx+1}`}></span>
                   <span className="ranking-item-nome">{x.setor || "—"}</span>
                   <span className="ranking-item-valor">{Number(x.nota_media||0).toFixed(2)}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          <div className="ranking-card">
+            <div className="ranking-card-header">
+              <span className="ranking-icon">🏆</span>
+              <strong>Top serviços</strong>
+              <button className="info-tooltip" aria-label="Setores com maior número de serviços (principal + participante)" data-tooltip="Setores com maior número de serviços (principal + participante)">i</button>
+            </div>
+            <ol className="ranking-list">
+              {rankServicos.map((x, idx) => (
+                <li className="ranking-item" key={x.sector_id || idx}>
+                  <span className={`ranking-item-pos pos-${idx+1}`}></span>
+                  <span className="ranking-item-nome">{x.setor || "—"}</span>
+                  <span className="ranking-item-valor">{fmt.format(Number(x.total_servicos||0))}</span>
                 </li>
               ))}
             </ol>
@@ -174,18 +210,30 @@ export default function Setores(){
                 Setor
                 <div className="th-tooltip-text">Hierarquia organizacional</div>
               </th>
-              <th style={{textAlign:"center"}} scope="col">Serviços principais</th>
-              <th style={{textAlign:"center"}} scope="col">Serviços participantes</th>
+              <th style={{textAlign:"center"}} scope="col">Usuários</th>
+              <th style={{textAlign:"center"}} scope="col">Serviços</th>
+              <th style={{textAlign:"center"}} scope="col">Eficiência</th>
+              <th style={{textAlign:"center"}} scope="col">Engajamento</th>
+              <th style={{textAlign:"center"}} scope="col">Qualidade</th>
             </tr>
           </thead>
           <tbody>
             {treeRows.map((r) => {
               const isRoot = (r.nivel ?? 0) === 0;
               const indent = (r.nivel ?? 0) * 16;
-              const principal = isRoot ? (r.servicos_principal_consolidado ?? 0) : (r.servicos_principal_individual ?? 0);
-              const participante = isRoot ? (r.servicos_participante_consolidado ?? 0) : (r.servicos_participante_individual ?? 0);
+              const principal = isRoot ? Number(r.servicos_principal_consolidado||0) : Number(r.servicos_principal_individual||0);
+              const participante = isRoot ? Number(r.servicos_participante_consolidado||0) : Number(r.servicos_participante_individual||0);
               const rootId = Number(String(r.path||"").split(",")[0]||"0");
               const visible = isRoot || expandedRoot[rootId] === true;
+              const usuarios = Number(r.usuarios_total||0);
+              const abertas = Number(r.solicitacoes_total||0);
+              const concluidas = Number(r.solicitacoes_concluidas||0);
+              const respondidas = Number(r.solicitacoes_respondidas||0);
+              const eficiencia = abertas > 0 ? (concluidas / abertas * 100) : null;
+              const engajamento = abertas > 0 ? (respondidas / abertas * 100) : null;
+              const eficienciaClass = eficiencia == null ? "" : (eficiencia >= 70 ? "pct-good" : (eficiencia >= 40 ? "pct-medium" : "pct-bad"));
+              const engajamentoClass = engajamento == null ? "" : (engajamento >= 70 ? "pct-good" : (engajamento >= 40 ? "pct-medium" : "pct-bad"));
+              const qualidade = Number(r.qualidade_media||0);
               return (
                 <>
                   <tr key={r.sector_id} className={(r.nivel ?? 0) === 0 ? "nivel-0" : ""} style={{ display: visible ? undefined : "none" }}>
@@ -210,8 +258,11 @@ export default function Setores(){
                         style={{ marginLeft: 8 }}
                       >i</button>
                     </td>
-                    <td style={{textAlign:"center"}}>{fmt.format(Number(principal||0))}</td>
-                    <td style={{textAlign:"center"}}>{fmt.format(Number(participante||0))}</td>
+                    <td style={{textAlign:"center"}}>{fmt.format(usuarios)}</td>
+                    <td style={{textAlign:"center"}}>{(principal||participante) ? `${fmt.format(principal)} / ${fmt.format(participante)}` : "—"}</td>
+                    <td style={{textAlign:"center"}} className={eficienciaClass}>{eficiencia != null ? `${eficiencia.toFixed(1)}%` : "—"}</td>
+                    <td style={{textAlign:"center"}} className={engajamentoClass}>{engajamento != null ? `${engajamento.toFixed(1)}%` : "—"}</td>
+                    <td style={{textAlign:"center"}}>{qualidade > 0 ? qualidade.toFixed(2) : "—"}</td>
                   </tr>
                   {openUsersSectorId === r.sector_id && (
                     <tr key={`${r.sector_id}-users`} className="hidden-row" style={{ display: "table-row", background: "#f9fafb" }}>

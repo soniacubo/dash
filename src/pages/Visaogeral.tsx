@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import Header from "../components/Header";
 import { API_BASE_URL } from "../app";
 import Chart from "chart.js/auto";
 
@@ -7,6 +7,8 @@ export default function Visaogeral(){
   const fmt = useMemo(() => new Intl.NumberFormat("pt-BR"), []);
   const evolucaoRef = useRef<HTMLCanvasElement|null>(null);
   const chartRef = useRef<Chart|null>(null);
+  const perfilRef = useRef<HTMLCanvasElement|null>(null);
+  const perfilChart = useRef<Chart|null>(null);
   const [anos, setAnos] = useState<number[]>([]);
   const [anoSel, setAnoSel] = useState<number>(new Date().getFullYear());
   const [economiaRows, setEconomiaRows] = useState<{mes_iso:string, solicitacoes_mes:number, economia_estimativa:number}[]>([]);
@@ -35,6 +37,9 @@ export default function Visaogeral(){
       set("vg-cidadaos-mulheres", fmt.format(c.mulheres || 0));
       const idade = c.idade_media != null ? Number(c.idade_media) : null;
       set("vg-idade-media", idade != null ? `${idade.toFixed(0)} anos` : "—");
+      set("vg-publico-homens", fmt.format(c.homens || 0));
+      set("vg-publico-mulheres", fmt.format(c.mulheres || 0));
+      set("vg-publico-idade", idade != null ? `${idade.toFixed(0)} anos` : "—");
     }
     cidadaos();
   }, [fmt]);
@@ -65,6 +70,53 @@ export default function Visaogeral(){
   }, []);
 
   useEffect(() => {
+    async function perfis(){
+      const r = await fetch(`${API_BASE_URL}/visao-geral/contadores`);
+      const k = await r.json();
+      if (!perfilRef.current) return;
+      const servidores = Number(k.total_usuarios||0);
+      const cidadaos = Number(k.total_cidadaos||0);
+      const representantes = 45000;
+      const raw = [servidores, cidadaos, representantes];
+      const display = raw.map(v => Math.sqrt(Math.max(1, v)));
+      if (perfilChart.current) perfilChart.current.destroy();
+      perfilChart.current = new Chart(perfilRef.current, {
+        type: "doughnut",
+        data: {
+          labels: ["Servidores", "Cidadãos", "Representantes"],
+          datasets: [{
+            data: display,
+            backgroundColor: ["#2563eb", "#60a5fa", "#93c5fd"],
+            borderColor: "#ffffff",
+            borderWidth: 2,
+            offset: (ctx: any) => ctx.dataIndex === 0 ? 8 : 0,
+            hoverOffset: 10
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "45%",
+          plugins: {
+            legend: { position: "bottom" },
+            tooltip: {
+              callbacks: {
+                label: (ctx: any) => {
+                  const idx = ctx.dataIndex ?? 0;
+                  const val = raw[idx] ?? 0;
+                  return `${ctx.label}: ${fmt.format(Number(val||0))}`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    perfis();
+    return () => { if (perfilChart.current) perfilChart.current.destroy(); };
+  }, []);
+
+  useEffect(() => {
     const y = new Date().getFullYear();
     setAnos([y, y-1, y-2, y-3, y-4]);
   }, []);
@@ -83,22 +135,7 @@ export default function Visaogeral(){
 
   return (
     <main className="main-container">
-      <header className="top-nav" role="banner">
-        <div className="top-nav-left">
-          <img src="/cc.png" className="top-logo" alt="Cidade Conectada" />
-        </div>
-        <nav className="top-nav-center" aria-label="Navegação principal">
-          <div className="top-nav-items">
-            <Link to="/visaogeral" className="nav-item active">Visão Geral</Link>
-            <Link to="/setores" className="nav-item">Setores</Link>
-            <Link to="/usuarios" className="nav-item">Usuários</Link>
-            <a href="#" className="nav-item">Solicitações</a>
-            <a href="#" className="nav-item">Avaliações</a>
-            <a href="#" className="nav-item">Agendamentos</a>
-          </div>
-        </nav>
-        <div className="top-nav-right" />
-      </header>
+      <Header />
 
       <section className="dash-section" style={{marginBottom:20}}>
         <div style={{display:"flex",justifyContent:"center",alignItems:"center",textAlign:"center",padding:"12px 0"}}>
@@ -110,8 +147,28 @@ export default function Visaogeral(){
       </section>
 
       <section className="dash-section" aria-labelledby="kpi-title">
-        <div className="card-deck" id="vg-kpis">
-          <h2 id="kpi-title" className="sr-only">Indicadores principais</h2>
+        <h2 id="kpi-title" style={{ textAlign: "center", color: "#000", margin: "0 0 12px" }}>
+          Indicadores principais
+        </h2>
+
+        <div className="card-deck" id="vg-kpis"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: 12,
+            width: "100%"
+          }}
+        >
+          <div className="user-stat-card">
+            Setores
+            <strong id="vg-setores">—</strong>
+          </div>
+
+          <div className="user-stat-card">
+            Usuários (servidores)
+            <strong id="vg-usuarios">—</strong>
+          </div>
+
           <div className="user-stat-card">
             Eficiência média
             <strong id="vg-eficiencia">—%</strong>
@@ -129,26 +186,30 @@ export default function Visaogeral(){
             <strong id="vg-servicos">—</strong>
           </div>
 
-          <div className="user-stat-card">
-            Usuários (servidores)
-            <strong id="vg-usuarios">—</strong>
-          </div>
-
           <div className="user-stat-card kpi-cidadaos">
             Cidadãos (contas)
             <strong id="vg-cidadaos-total">—</strong>
+          </div>
+
+          <div className="user-stat-card">
+            Público
+            <div className="kpi-gender" style={{ marginTop: 6 }}>
+              <span style={{ color: "#2563eb" }}>♂ <b id="vg-publico-homens">—</b></span>
+              <span style={{ marginLeft: 8, color: "#ec4899" }}>♀ <b id="vg-publico-mulheres">—</b></span>
+            </div>
             <div className="kpi-age">
-              <span>Média de Idade: <b id="vg-idade-media">—</b></span>
+              <span>Média de Idade: <b id="vg-publico-idade">—</b></span>
             </div>
           </div>
 
-          <div className="user-stat-card kpi-card--accent kpi-card--wide">
+          <div className="user-stat-card kpi-card--accent">
             Economia estimada
             <strong id="vg-economia" className="currency">—</strong>
             <div className="kpi__sub">Páginas/Impressões evitadas × custo médio</div>
           </div>
         </div>
       </section>
+
 
       <section className="dash-section" style={{marginTop:10}} aria-labelledby="evolucao-title">
         <div className="section-content-flex">
@@ -157,6 +218,13 @@ export default function Visaogeral(){
             <p style={{fontSize: ".9rem", color: "#6b7280"}}>Volume mensal de solicitações/processos</p>
             <div className="chart-container" style={{height:330}}>
               <canvas ref={evolucaoRef}></canvas>
+            </div>
+          </div>
+          <div className="ranking-box" style={{flex:1}}>
+            <h3>Distribuição de Acessos por Perfil</h3>
+            <p style={{fontSize: ".9rem", color: "#6b7280"}}>Servidores × Cidadãos × Representantes</p>
+            <div className="chart-container" style={{height:330}}>
+              <canvas ref={perfilRef}></canvas>
             </div>
           </div>
         </div>
