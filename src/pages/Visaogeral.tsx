@@ -84,14 +84,14 @@ export default function Visaogeral(){
         type: "doughnut",
         data: {
           labels: ["Servidores", "Cidadãos", "Representantes"],
-          datasets: [{
-            data: display,
-            backgroundColor: ["#2563eb", "#60a5fa", "#93c5fd"],
-            borderColor: "#ffffff",
-            borderWidth: 2,
-            offset: (ctx: any) => ctx.dataIndex === 0 ? 8 : 0,
-            hoverOffset: 10
-          }]
+            datasets: [{
+              data: display,
+              backgroundColor: ["#2563eb", "#60a5fa", "#93c5fd"],
+              borderColor: "#ffffff",
+              borderWidth: 2,
+              offset: display.map((_, i) => (i === 0 ? 8 : 0)),
+              hoverOffset: 10
+            }]
         },
         options: {
           responsive: true,
