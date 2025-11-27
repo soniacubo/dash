@@ -8,62 +8,106 @@ require("dotenv").config();
 
 const app = express();
 
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || "").split(",").map(s => s.trim()).filter(Boolean);
+/* =============================
+   ✅ CORS CONFIG
+============================= */
+/* =============================
+   ✅ CORS CONFIG (fix completo)
+============================= */
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map(s => s.trim())
+  .filter(Boolean);
+
 const corsOptions = {
-  origin: function (origin, callback) {
+  origin(origin, callback) {
     const isDev = process.env.NODE_ENV !== "production";
-    if (!origin && isDev) return callback(null, true);
-    if (allowedOrigins.length === 0) return callback(null, true);
+
+    // 🔥 Permitir qualquer origem no desenvolvimento
+    if (isDev) {
+      return callback(null, true);
+    }
+
+    // 🔒 Em produção, só o que estiver no .env
+    if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
-    callback(new Error("Not allowed by CORS"));
+
+    return callback(new Error("Not allowed by CORS"));
   },
   credentials: true
 };
+
+
+
+
 app.use(cors(corsOptions));
 app.use(helmet());
 app.set("trust proxy", 1);
 app.use(rateLimit({ windowMs: 60 * 1000, max: 300 }));
 app.use(express.json());
-app.use(express.static(path.join(__dirname), { maxAge: process.env.STATIC_MAXAGE || "1d", etag: true }));
 
+/* =============================
+   ✅ STATIC FILES
+============================= */
+app.use(
+  express.static(path.join(__dirname), {
+    maxAge: process.env.STATIC_MAXAGE || "1d",
+    etag: true
+  })
+);
+
+/* =============================
+   ✅ LOGGER
+============================= */
 const logger = {
   info: (msg, meta) => console.log(JSON.stringify({ level: "info", msg, ...meta })),
   error: (msg, meta) => console.error(JSON.stringify({ level: "error", msg, ...meta }))
 };
 
-/* ============================================================
-   🔥 CONEXÃO COM MYSQL
-============================================================ */
+/* =============================
+   ✅ MYSQL POOL (ÚNICO)
+============================= */
 const db = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASS,
   database: process.env.DB_NAME,
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: 10
 });
 
-// Converte data BR (dd/mm/aaaa) → MySQL (aaaa-mm-dd)
+/* =============================
+   ✅ HELPERS
+============================= */
 function brToMySQL(dateBR) {
-    if (!dateBR) return null;
-    const [dia, mes, ano] = dateBR.split("/");
-    return `${ano}-${mes}-${dia}`;
+  if (!dateBR) return null;
+  const [d, m, y] = dateBR.split("/");
+  return `${y}-${m}-${d}`;
 }
 
-function isISODate(str) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(str);
+function getStartDateFromPeriod(periodKey) {
+  const now = new Date();
+  now.setHours(23, 59, 59, 999);
+  const start = new Date(now);
+
+  switch (periodKey) {
+    case "today": start.setHours(0,0,0,0); break;
+    case "7d": start.setDate(start.getDate() - 7); break;
+    case "30d": start.setDate(start.getDate() - 30); break;
+    case "90d": start.setDate(start.getDate() - 90); break;
+    case "6m": start.setMonth(start.getMonth() - 6); break;
+    case "1y": start.setFullYear(start.getFullYear() - 1); break;
+    default: start.setDate(start.getDate() - 30);
+  }
+
+  return `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,"0")}-${String(start.getDate()).padStart(2,"0")} 00:00:00`;
 }
 
-function validateDateRange(start, end) {
-  if (!start || !end) return { ok: false, reason: "Missing dates" };
-  if (!isISODate(start) || !isISODate(end)) return { ok: false, reason: "Invalid format" };
-  const s = new Date(`${start}T00:00:00`);
-  const e = new Date(`${end}T23:59:59`);
-  if (isNaN(s) || isNaN(e)) return { ok: false, reason: "Invalid date" };
-  if (s > e) return { ok: false, reason: "Start after end" };
-  return { ok: true, start, end };
-}
+const TENANT_ID = 1;
 
+/* =============================
+   ✅ ROTAS — VISÃO GERAL
+============================= */
 
 /* ============================================================
    1) ROTA PRINCIPAL → SETORES + SERVIÇOS
@@ -480,18 +524,11 @@ app.get("/api/indicadores/servidores-por-setor", async (req, res) => {
 app.get("/api/usuarios/detalhado", async (req, res) => {
   try {
     const { dataInicial, dataFinal } = req.query;
-    const tenantId = 1;
+    const tenantId = 1; // AJUSTE SE NECESSÁRIO
 
-    let dataIni = null;
-    let dataFim = null;
-    if (dataInicial && dataFinal) {
-      const v = validateDateRange(dataInicial, dataFinal);
-      if (!v.ok) {
-        return res.status(400).json({ error: "Parâmetros de data inválidos" });
-      }
-      dataIni = `${v.start} 00:00:00`;
-      dataFim = `${v.end} 23:59:59`;
-    }
+    // Normaliza datas para o formato completo
+    const dataIni = dataInicial ? `${dataInicial} 00:00:00` : null;
+    const dataFim = dataFinal ? `${dataFinal} 23:59:59` : null;
 
     const sql = `
 WITH RECURSIVE sector_hierarchy AS (
@@ -578,7 +615,7 @@ ORDER BY u.first_name, u.last_name;
     res.json(rows);
 
   } catch (err) {
-    logger.error("Erro ao carregar usuários detalhados", { error: String(err) });
+    console.error("Erro ao carregar usuários detalhados:", err);
     res.status(500).json({ error: "Erro ao consultar usuários" });
   }
 });
@@ -639,6 +676,8 @@ app.get("/api/usuarios/estatisticas", async (req, res) => {
   }
 });
 app.get("/api/ranking-despachos", async (req, res) => {
+
+      console.log("Datas recebidas:", req.query);   // <<< AQUI
     try {
         const tenantId = 1;
 
@@ -647,14 +686,12 @@ app.get("/api/ranking-despachos", async (req, res) => {
         let filtro = "";
         let params = [];
 
+        // Se recebeu datas
         if (dataInicial && dataFinal) {
-            const v = validateDateRange(dataInicial, dataFinal);
-            if (!v.ok) {
-              return res.status(400).json({ error: "Parâmetros de data inválidos" });
-            }
             filtro = ` AND t.created_at BETWEEN ? AND ? `;
-            params.push(v.start, v.end);
+            params.push(dataInicial, dataFinal);
         } else {
+            // Últimos 30 dias
             filtro = ` AND t.created_at >= NOW() - INTERVAL 30 DAY `;
         }
 
@@ -677,7 +714,7 @@ app.get("/api/ranking-despachos", async (req, res) => {
         res.json(rows);
 
     } catch (error) {
-        logger.error("Erro ranking", { error: String(error) });
+        console.error("Erro ranking:", error);
         res.status(500).json({ error: "Erro ao carregar ranking de despachos" });
     }
 });
@@ -832,7 +869,7 @@ app.get("/api/visao-geral/evolucao-uso", async (req, res) => {
   try {
     const sql = `
       WITH RECURSIVE meses AS (
-        SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 11 MONTH), '%Y-%m-01') AS mes
+        SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 6 MONTH), '%Y-%m-01') AS mes
         UNION ALL
         SELECT DATE_FORMAT(DATE_ADD(mes, INTERVAL 1 MONTH), '%Y-%m-01')
         FROM meses
@@ -876,22 +913,136 @@ app.get("/api/visao-geral/evolucao-uso", async (req, res) => {
 });
 
 
+
+app.get("/api/solicitacoes/bairros-top6", async (req, res) => {
+  try {
+    const ano = req.query.ano || new Date().getFullYear();
+    const tenant = 1;
+
+    // Buscar os 6 bairros mais solicitantes no ano
+    const [topBairros] = await db.query(
+      `
+      SELECT 
+          s.neighborhood AS bairro,
+          COUNT(*) AS total
+      FROM solicitations s
+      WHERE s.tenant_id = ?
+        AND s.neighborhood IS NOT NULL
+        AND YEAR(s.created_at) = ?
+      GROUP BY s.neighborhood
+      ORDER BY total DESC
+      LIMIT 6
+      `,
+      [tenant, ano]
+    );
+
+    if (topBairros.length === 0) {
+      return res.json([]);
+    }
+
+    const nomes = topBairros.map(b => b.bairro);
+
+    // Buscar evolução mensal de cada um dos 6 bairros
+    const [evolucao] = await db.query(
+      `
+      SELECT 
+          s.neighborhood AS bairro,
+          MONTH(s.created_at) AS mes,
+          COUNT(*) AS total
+      FROM solicitations s
+      WHERE s.tenant_id = ?
+        AND s.neighborhood IN (?)
+        AND YEAR(s.created_at) = ?
+      GROUP BY bairro, mes
+      ORDER BY mes ASC
+      `,
+      [tenant, nomes, ano]
+    );
+
+    res.json({ bairros: topBairros, meses: evolucao });
+
+  } catch (e) {
+    console.error("Erro /bairros-top6:", e);
+    res.status(500).json({ error: "Erro ao buscar bairros" });
+  }
+});
+
+
+
+app.get("/api/indicadores/servicos-top5", async (req, res) => {
+  try {
+    const periodo = String(req.query.periodo || "90d");
+    const inicio = getStartDateFromPeriod(periodo);
+    const sql = `
+      SELECT se.title AS servico, COUNT(*) AS total
+      FROM jp_conectada.solicitations s
+      JOIN jp_conectada.services se ON se.id = s.service_id
+      WHERE s.tenant_id = 1
+        AND s.created_at BETWEEN ? AND NOW()
+      GROUP BY se.title
+      ORDER BY total DESC
+      LIMIT 5`;
+    const [rows] = await db.query(sql, [inicio]);
+    res.json(rows);
+  } catch (err) {
+    logger.error("servicos-top5 erro", { error: String(err) });
+    res.status(500).json({ error: "Falha ao carregar serviços top5" });
+  }
+});
+
+app.get("/api/indicadores/setores-top5", async (req, res) => {
+  try {
+    const periodo = String(req.query.periodo || "90d");
+    const inicio = getStartDateFromPeriod(periodo);
+    const sql = `
+      SELECT sec.title AS setor, COUNT(*) AS total
+      FROM jp_conectada.solicitations s
+      JOIN jp_conectada.service_sector ss ON ss.service_id = s.service_id
+      JOIN jp_conectada.sectors sec ON sec.id = ss.sector_id
+      WHERE s.tenant_id = 1
+        AND sec.active = 1 AND sec.tenant_id = 1
+        AND s.created_at BETWEEN ? AND NOW()
+      GROUP BY sec.title
+      ORDER BY total DESC
+      LIMIT 5`;
+    const [rows] = await db.query(sql, [inicio]);
+    res.json(rows);
+  } catch (err) {
+    logger.error("setores-top5 erro", { error: String(err) });
+    res.status(500).json({ error: "Falha ao carregar setores top5" });
+  }
+});
+
+app.get("/api/indicadores/taxa-resolucao", async (req, res) => {
+  try {
+    const periodo = String(req.query.periodo || "90d");
+    const inicio = getStartDateFromPeriod(periodo);
+    const sql = `
+      SELECT 
+        COUNT(*) AS total,
+        SUM(CASE WHEN s.status = 0 THEN 1 ELSE 0 END) AS abertas,
+        SUM(CASE WHEN s.status = 1 THEN 1 ELSE 0 END) AS concluidas,
+        SUM(CASE WHEN s.status = 2 THEN 1 ELSE 0 END) AS respondidas
+      FROM jp_conectada.solicitations s
+      WHERE s.tenant_id = 1
+        AND s.created_at BETWEEN ? AND NOW()`;
+    const [[row]] = await db.query(sql, [inicio]);
+    const total = Number(row?.total || 0);
+    const abertas = Number(row?.abertas || 0);
+    const concluidas = Number(row?.concluidas || 0);
+    const respondidas = Number(row?.respondidas || 0);
+    const andamento = Math.max(total - abertas - concluidas, 0);
+    res.json({ abertas, andamento, concluidas, respondidas, total });
+  } catch (err) {
+    logger.error("taxa-resolucao erro", { error: String(err) });
+    res.status(500).json({ error: "Falha ao carregar taxa de resolução" });
+  }
+});
+
 /* ============================================================
    VISÃO GERAL — ROTAS (cole no seu server.js)
 ============================================================ */
-const TENANT_ID = 1;
 
-/**
- * 1) Contadores globais (KPIs)
- * - total de serviços (services)
- * - total de usuários (users)
- * - total de cidadãos (citizens)
- * - total de setores (sectors)
- * - eficiência global (ex.: concluidas/total em %)
- * - qualidade média (ex.: média geral das avaliações 1..5)
- *
- * Ajuste os SELECTs conforme os nomes reais das suas tabelas/colunas.
- */
 app.get("/api/visao-geral/contadores", async (req, res) => {
   try {
     const sql = `
@@ -961,7 +1112,45 @@ app.get("/api/visao-geral/cidadaos-resumo", async (req, res) => {
     res.status(500).json({ error: "Falha ao carregar resumo de cidadãos" });
   }
 });
-/* rota duplicada removida: /api/visao-geral/evolucao-uso */
+app.get("/api/visao-geral/evolucao-uso", async (req, res) => {
+  try {
+    const sql = `
+      SELECT
+        DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n MONTH), '%Y-%m-01') AS mes_iso,
+
+        /* Abertas no mês pela created_at */
+        (
+          SELECT COUNT(*)
+          FROM jp_conectada.solicitations s
+          WHERE s.tenant_id = ?
+            AND s.created_at >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n MONTH), '%Y-%m-01')
+            AND s.created_at <  DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n-1 MONTH), '%Y-%m-01')
+        ) AS abertas,
+
+        /* Concluídas no mês pela updated_at com status = 1  */
+        (
+          SELECT COUNT(*)
+          FROM jp_conectada.solicitations s2
+          WHERE s2.tenant_id = 1
+            AND s2.status = 1
+            AND s2.updated_at >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n MONTH), '%Y-%m-01')
+            AND s2.updated_at <  DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n-1 MONTH), '%Y-%m-01')
+        ) AS concluidas
+      FROM (
+        SELECT 11 AS n UNION ALL SELECT 10 UNION ALL SELECT 9 UNION ALL SELECT 8 UNION ALL
+        SELECT 7 UNION ALL SELECT 6 UNION ALL SELECT 5 UNION ALL SELECT 4 UNION ALL
+        SELECT 3 UNION ALL SELECT 2 UNION ALL SELECT 1 UNION ALL SELECT 0
+      ) seq
+      ORDER BY DATE(mes_iso);
+    `;
+
+    const [rows] = await db.query(sql, [TENANT_ID, TENANT_ID]);
+    res.json(rows);
+  } catch (err) {
+    console.error("Evolução erro:", err);
+    res.status(500).json({ error: "Falha ao carregar evolução de uso" });
+  }
+});
 
 
 
@@ -996,28 +1185,769 @@ app.get("/api/visao-geral/economia", async (req, res) => {
 });
 
 
+app.get("/api/grafico-top3-bairros", async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      WITH total_bairros AS (
+          SELECT 
+              n.id AS bairro_id,
+              n.title AS bairro,
+              COUNT(*) AS total
+          FROM jp_conectada.solicitations s
+          JOIN jp_conectada.neighborhoods n ON n.id = s.lives_at
+          WHERE s.created_at >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+          GROUP BY n.id, n.title
+          ORDER BY total DESC
+          LIMIT 5
+      )
+      SELECT
+          DATE_FORMAT(s.created_at, '%Y-%m') AS mes,
+          n.id AS bairro_id,
+          n.title AS bairro,
+          COUNT(*) AS total
+      FROM jp_conectada.solicitations s
+      JOIN jp_conectada.neighborhoods n ON n.id = s.lives_at
+      JOIN total_bairros t ON t.bairro_id = n.id
+      WHERE s.created_at >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+      GROUP BY mes, bairro
+      ORDER BY mes ASC, bairro ASC;
+    `);
 
+    res.json(rows);
 
-
-
-
-
-
-
-
-
-
-
-
-
+  } catch (err) {
+    console.error("Erro ao gerar gráfico top3 bairros:", err);
+    res.status(500).json({ error: "Erro interno" });
+  }
+});
 
 
 
 
 /* ============================================================
-   🔥 INICIA SERVIDOR
+   GET /api/indicadores-periodo/servicos
+   Retorna top 5 serviços mais solicitados no período
 ============================================================ */
+app.get('/api/indicadores-periodo/servicos', async (req, res) => {
+  try {
+    const period = req.query.period || '30d';
+    const startDate = getStartDateFromPeriod(period);
+
+    const [rows] = await db.query(
+      `
+      SELECT
+        sv.id AS service_id,
+        sv.title AS service_name,
+        COUNT(*) AS total
+      FROM solicitations s
+      JOIN services sv ON sv.id = s.service_id
+      WHERE
+        s.tenant_id = ?
+        AND s.created_at >= ?
+        AND s.deleted_at IS NULL
+      GROUP BY sv.id, sv.title
+      ORDER BY total DESC
+      LIMIT 5;
+      `,
+      [TENANT_ID, startDate]
+    );
+
+    res.json(rows);
+  } catch (error) {
+    console.error('Erro ao carregar serviços mais solicitados:', error);
+    res.status(500).json({ error: 'Erro ao carregar dados' });
+  }
+});
+
+
+
+/* ============================================================
+   GET /api/indicadores-periodo/setores
+   Retorna top 5 setores com mais solicitações no período
+============================================================ */
+app.get('/api/indicadores-periodo/setores', async (req, res) => {
+  try {
+    const period = req.query.period || '30d';
+    const startDate = getStartDateFromPeriod(period);
+
+    const [rows] = await db.query(
+      `
+      SELECT
+          st.id AS sector_id,
+          st.title AS sector_name,
+          COUNT(*) AS total
+      FROM solicitations s
+      JOIN service_sector ss 
+          ON ss.service_id = s.service_id
+          AND ss.\`primary\` = 1
+      JOIN sectors st 
+          ON st.id = ss.sector_id
+      WHERE
+          s.tenant_id = 1
+          AND s.created_at >= ?
+          AND s.deleted_at IS NULL
+      GROUP BY st.id, st.title
+      ORDER BY total DESC
+      LIMIT 5;
+      `,
+      [startDate]
+    );
+
+    res.json(rows);
+  } catch (error) {
+    console.error("Erro ao carregar setores mais solicitados:", error);
+    res.status(500).json({ error: "Erro ao buscar dados" });
+  }
+});
+
+
+/* ============================================================
+   GET /api/indicadores-periodo/taxa-resolucao
+   
+   Retorna a taxa de resolução por dia com base no período
+============================================================ */
+app.get('/api/indicadores-periodo/taxa-resolucao', async (req, res) => {
+  try {
+    const period = req.query.period || '30d';
+    const startDate = getStartDateFromPeriod(period);
+
+    const [rows] = await db.query(
+      `
+      SELECT
+          abertas_por_dia.dia,
+          abertas_por_dia.abertas,
+          IFNULL(concluidas_por_dia.concluidas, 0) AS concluidas,
+          CASE 
+              WHEN abertas_por_dia.abertas = 0 THEN 0
+              ELSE ROUND((IFNULL(concluidas_por_dia.concluidas, 0) 
+                          / abertas_por_dia.abertas) * 100, 1)
+          END AS taxa_resolucao_percent
+      FROM (
+          SELECT
+              DATE(s.created_at) AS dia,
+              COUNT(*) AS abertas
+          FROM solicitations s
+          WHERE
+              s.tenant_id = 1
+              AND s.created_at >= ?
+              AND s.deleted_at IS NULL
+          GROUP BY DATE(s.created_at)
+      ) abertas_por_dia
+      LEFT JOIN (
+          SELECT
+              DATE(s.updated_at) AS dia,
+              COUNT(*) AS concluidas
+          FROM solicitations s
+          WHERE
+              s.tenant_id = 1
+              AND s.updated_at >= ?
+              AND s.status = 1
+              AND s.deleted_at IS NULL
+          GROUP BY DATE(s.updated_at)
+      ) concluidas_por_dia
+      ON concluidas_por_dia.dia = abertas_por_dia.dia
+      ORDER BY abertas_por_dia.dia;
+      `,
+      [startDate, startDate]
+    );
+
+    // Formatador para DD/MM
+    const formatted = rows.map(r => {
+      const d = new Date(r.dia);
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      return {
+        dia_label: `${dd}/${mm}`,
+        abertas: r.abertas,
+        concluidas: r.concluidas,
+        taxa_resolucao_percent: Number(r.taxa_resolucao_percent)
+      };
+    });
+
+    res.json(formatted);
+  } catch (error) {
+    console.error('Erro ao carregar taxa de resolução:', error);
+    res.status(500).json({ error: 'Erro ao carregar dados' });
+  }
+});
+app.get("/api/resumo-periodo", async (req, res) => {
+  try {
+    const ano = parseInt(req.query.ano) || new Date().getFullYear();
+
+    const [rows] = await db.query(
+      `
+      WITH RECURSIVE meses AS (
+          SELECT 1 AS mes
+          UNION ALL SELECT mes + 1 FROM meses WHERE mes < 12
+      ),
+
+      -- Solicitações por mês
+      sol AS (
+          SELECT 
+              MONTH(created_at) AS mes,
+              COUNT(*) AS total_solicitacoes,
+              COUNT(DISTINCT citizen_id) AS pessoas_atendidas
+          FROM solicitations
+          WHERE tenant_id = 1
+            AND YEAR(created_at) = ?
+            AND deleted_at IS NULL
+          GROUP BY MONTH(created_at)
+      ),
+
+      -- Notificações por mês
+      notif AS (
+          SELECT 
+              MONTH(created_at) AS mes,
+              COUNT(*) AS total_notificacoes
+          FROM notifications
+          WHERE tenant_id = 1
+            AND YEAR(created_at) = ?
+          GROUP BY MONTH(created_at)
+      ),
+
+      -- Tramitações por mês (JOIN na solicitation)
+      tram AS (
+          SELECT
+              MONTH(t.created_at) AS mes,
+              COUNT(*) AS total_tramitacoes
+          FROM tramitations t
+          JOIN solicitations s ON s.id = t.solicitation_id
+          WHERE s.tenant_id = 1
+            AND YEAR(t.created_at) = ?
+          GROUP BY MONTH(t.created_at)
+      )
+
+      SELECT
+          m.mes,
+          DATE_FORMAT(STR_TO_DATE(CONCAT(?, '-', m.mes, '-01'), '%Y-%m-%d'), '%b') AS mes_nome,
+
+          COALESCE(sol.total_solicitacoes, 0) AS total_solicitacoes,
+          COALESCE(sol.pessoas_atendidas, 0) AS pessoas_atendidas,
+          COALESCE(notif.total_notificacoes, 0) AS total_notificacoes,
+          COALESCE(tram.total_tramitacoes, 0) AS total_tramitacoes,
+
+          -- Economia direta do seu cálculo
+          (
+              COALESCE(sol.total_solicitacoes, 0) * 0.65 +
+              COALESCE(tram.total_tramitacoes, 0) * 0.20
+          ) AS economia_gerada
+
+      FROM meses m
+      LEFT JOIN sol   ON sol.mes = m.mes
+      LEFT JOIN notif ON notif.mes = m.mes
+      LEFT JOIN tram  ON tram.mes = m.mes
+      ORDER BY m.mes;
+      `,
+      [ano, ano, ano, ano]
+    );
+
+    res.json(rows);
+
+  } catch (err) {
+    console.error("Erro resumo período:", err);
+    res.status(500).json({ error: "Erro ao buscar dados" });
+  }
+});
+
+
+
+app.get("/api/economometro", async (req, res) => {
+  try {
+    const periodo = req.query.periodo || "ano";
+
+    // ============================================================
+    // 1) Definir intervalo de datas
+    // ============================================================
+    const hoje = new Date();
+    let inicio = new Date(hoje);
+
+    switch (periodo) {
+      case "esta-semana":
+        inicio.setDate(hoje.getDate() - hoje.getDay());
+        break;
+
+      case "este-mes":
+        inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        break;
+
+      case "90d":
+        inicio.setDate(hoje.getDate() - 90);
+        break;
+
+      case "6m":
+        inicio.setMonth(hoje.getMonth() - 6);
+        break;
+
+      case "ano":
+      default:
+        inicio = new Date(hoje.getFullYear(), 0, 1);
+        break;
+    }
+
+    const inicioISO = inicio.toISOString().slice(0, 19).replace("T", " ");
+    const fimISO    = hoje.toISOString().slice(0, 19).replace("T", " ");
+
+    // ============================================================
+    // 2) Consultas SQL reais
+    // ============================================================
+
+    // 2.1 — Solicitações criadas
+    const [solRows] = await db.query(
+      `
+      SELECT COUNT(*) AS total
+      FROM solicitations
+      WHERE tenant_id = 1
+        AND created_at BETWEEN ? AND ?
+        AND deleted_at IS NULL
+      `,
+      [inicioISO, fimISO]
+    );
+
+    // 2.2 — Tramitações realizadas
+    // (Sua tabela NÃO possui tenant_id, ajustado!)
+    const [tramRows] = await db.query(
+      `
+      SELECT COUNT(*) AS total
+      FROM tramitations
+      WHERE created_at BETWEEN ? AND ?
+      `,
+      [inicioISO, fimISO]
+    );
+
+    // NOTA: Notificações não entram no economômetro, mas podem entrar se quiser.
+
+    const totalSolic = solRows[0].total || 0;
+    const totalTram = tramRows[0].total || 0;
+
+    // ============================================================
+    // 3) Cálculo REAL da economia
+    // ============================================================
+
+    // 🔹 CUSTO MÉDIO POR PÁGINA
+    const custoPagina = 0.35; // R$ 0,35 — você pode ajustar
+
+    // 🔹 Folhas economizadas:
+    // 1 solicitação => média 0.65 páginas economizadas
+    // 1 tramitação  => média 0.20 páginas economizadas
+    const folhas = (totalSolic * 0.65) + (totalTram * 0.20);
+
+    // 🔹 Árvores preservadas:
+    const arvores = folhas / 8000;
+
+    // 🔹 Economia financeira:
+    const dinheiro = folhas * custoPagina;
+
+    // ============================================================
+    // 4) Retornar resultado
+    // ============================================================
+    res.json({
+      periodo,
+      intervalo: { inicio: inicioISO, fim: fimISO },
+
+      solicitacoes: totalSolic,
+      tramitacoes: totalTram,
+
+      folhas: Math.round(folhas),
+      arvores: arvores.toFixed(3),
+      dinheiro: dinheiro.toFixed(2),
+
+      custo_pagina_usado: custoPagina
+    });
+
+  } catch (err) {
+    console.error("Erro no economômetro:", err);
+    res.status(500).json({ error: "Erro ao gerar economômetro" });
+  }
+});
+
+/* ============================================================
+   SETORES COM SERVIÇOS
+============================================================ */
+app.get("/api/solicitacoes/setores", async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT DISTINCT 
+          s.id AS sector_id,
+          s.title AS name
+      FROM sectors s
+      JOIN service_sector ss ON ss.sector_id = s.id
+      WHERE s.tenant_id = 1
+      and active = 1 
+      ORDER BY s.title;
+    `);
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro /solicitacoes/setores:", err);
+    res.status(500).json({ error: "Erro ao carregar setores" });
+  }
+});
+
+
+
+
+/* ============================================================
+   SERVIÇOS (GLOBAL OU POR SETOR)
+============================================================ */
+app.get("/api/solicitacoes/servicos", async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT DISTINCT 
+          sv.id AS service_id,
+          sv.title AS name
+      FROM services sv
+      JOIN service_sector ss ON ss.service_id = sv.id
+      WHERE sv.tenant_id = 1
+      ORDER BY sv.title;
+    `);
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro /solicitacoes/servicos:", err);
+    res.status(500).json({ error: "Erro ao buscar serviços" });
+  }
+});
+
+app.get("/api/solicitacoes/servicos-por-setor", async (req, res) => {
+  try {
+    const setorId = req.query.setor;
+    if (!setorId) return res.json([]);
+
+    const [rows] = await db.query(`
+      SELECT DISTINCT 
+          sv.id AS service_id,
+          sv.title AS name
+      FROM services sv
+      JOIN service_sector ss ON ss.service_id = sv.id
+      WHERE ss.sector_id = ?
+      ORDER BY sv.title;
+    `, [setorId]);
+
+    res.json(rows);
+
+  } catch (err) {
+    console.error("Erro /solicitacoes/servicos-por-setor:", err);
+    res.status(500).json({ error: "Erro ao buscar serviços por setor" });
+  }
+});
+
+
+/* ============================================================
+   RESUMO DOS CARDS — TOTAL | INICIADAS | ESPERA | RESPONDIDAS | CONCLUÍDAS
+============================================================ */
+app.get("/api/solicitacoes/resumo", async (req, res) => {
+  try {
+    let { inicio, fim, setor, servico } = req.query;
+
+    let where = `s.tenant_id = 1 AND s.deleted_at IS NULL`;
+    const params = [];
+
+    // Período
+    if (inicio && fim) {
+      where += " AND DATE(s.created_at) BETWEEN ? AND ?";
+      params.push(inicio, fim);
+    }
+
+    // Filtrar setor → via tabela service_sector
+    if (setor) {
+      where += " AND EXISTS (SELECT 1 FROM service_sector ss WHERE ss.service_id = s.service_id AND ss.sector_id = ?)";
+      params.push(setor);
+    }
+
+    // Filtrar serviço
+    if (servico) {
+      where += " AND s.service_id = ?";
+      params.push(servico);
+    }
+
+    const [rows] = await db.query(
+      `
+      SELECT
+          COUNT(*) AS total,
+          SUM(CASE WHEN s.status = 0 THEN 1 ELSE 0 END) AS iniciadas,
+          SUM(CASE WHEN s.status = 2 THEN 1 ELSE 0 END) AS espera,
+          SUM(CASE WHEN s.status = 3 THEN 1 ELSE 0 END) AS respondidas,
+          SUM(CASE WHEN s.status = 1 THEN 1 ELSE 0 END) AS concluidas
+      FROM solicitations s
+      WHERE ${where}
+      `,
+      params
+    );
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("Erro /solicitacoes/resumo:", err);
+    res.status(500).json({ error: "Erro ao buscar resumo" });
+  }
+});
+
+
+app.get("/api/solicitacoes/lista", async (req, res) => {
+  try {
+    let { inicio, fim, setor, servico } = req.query;
+
+    let where = `s.tenant_id = 1 AND s.deleted_at IS NULL`;
+    const params = [];
+
+    if (inicio && fim) {
+      where += " AND DATE(s.created_at) BETWEEN ? AND ?";
+      params.push(inicio, fim);
+    }
+
+    if (setor) {
+      where += `
+        AND EXISTS (
+          SELECT 1 
+          FROM service_sector ss 
+          WHERE ss.service_id = s.service_id
+          AND ss.sector_id = ?
+        )`;
+      params.push(setor);
+    }
+
+    if (servico) {
+      where += " AND s.service_id = ?";
+      params.push(servico);
+    }
+
+    const [rows] = await db.query(
+      `
+      SELECT
+        s.id,
+        s.created_at,
+        s.protocol,
+        s.status,
+        c.name AS cidadao,
+        sv.title AS servico,
+        sec.title AS setor
+      FROM solicitations s
+      LEFT JOIN citizens c ON c.id = s.citizen_id
+      LEFT JOIN services sv ON sv.id = s.service_id
+      LEFT JOIN service_sector ss ON ss.service_id = s.service_id AND ss.primary = 1
+      LEFT JOIN sectors sec ON sec.id = ss.sector_id
+      WHERE ${where}
+      ORDER BY s.created_at DESC
+      `,
+      params
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro /solicitacoes/lista:", err);
+    res.status(500).json({ error: "Erro ao buscar lista" });
+  }
+});
+
+
+
+async function carregarEvolucaoSetor(id) {
+    const res = await fetch(`http://localhost:3000/api/setor/${id}/evolucao`);
+    const dados = await res.json();
+
+    const labels = dados.map(m => m.mes);
+    const valores = dados.map(m => m.total);
+
+    const ctx = document.getElementById("graficoEvolucaoSetor").getContext("2d");
+
+    if (graficoEvolucaoSetor) graficoEvolucaoSetor.destroy();
+
+    graficoEvolucaoSetor = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels,
+            datasets: [{
+                label: "Solicitações",
+                data: valores,
+                borderWidth: 3,
+                borderColor: "#2563eb",
+                backgroundColor: "rgba(37,99,235,.15)",
+                tension: .25
+            }]
+        },
+        options: { responsive: true }
+    });
+}
+
+
+
+async function carregarStatusSetor(id) {
+    const res = await fetch(`http://localhost:3000/api/setor/${id}/status`);
+    const dados = await res.json();
+
+    const labels = dados.map(d => d.status_nome);
+    const valores = dados.map(d => d.total);
+
+    const ctx = document.getElementById("graficoStatusSetor").getContext("2d");
+
+    if (graficoStatusSetor) graficoStatusSetor.destroy();
+
+    graficoStatusSetor = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+            labels,
+            datasets: [{
+                data: valores,
+                borderWidth: 0,
+                backgroundColor: ["#2563eb", "#f59e0b", "#10b981", "#ef4444", "#6b7280"]
+            }]
+        }
+    });
+}
+async function carregarServicosMaisSolicitados(id) {
+    const res = await fetch(`http://localhost:3000/api/setor/${id}/servicos`);
+    const dados = await res.json();
+
+    const box = document.getElementById("listaServicosSetor");
+    box.innerHTML = "";
+
+    dados.forEach(s => {
+        box.innerHTML += `
+            <div>
+                <span>${s.servico}</span>
+                <strong>${s.total}</strong>
+            </div>
+        `;
+    });
+}
+
+
+app.get("/api/setor/:id/servicos", async (req, res) => {
+    try {
+        const setorId = req.params.id;
+
+        const [rows] = await db.query(
+            `SELECT 
+                sv.id AS servico_id,
+                sv.title AS servico,
+                COUNT(s.id) AS total
+            FROM solicitations s
+            JOIN services sv ON sv.id = s.service_id
+            JOIN service_sector ss ON ss.service_id = sv.id
+            WHERE ss.sector_id = ?
+              AND s.tenant_id = 1
+              AND s.deleted_at IS NULL
+            GROUP BY sv.id, sv.title
+            ORDER BY total DESC`,
+            [setorId]
+        );
+
+        res.json(rows);
+
+    } catch (e) {
+        console.error("Erro /setor/servicos:", e);
+        res.status(500).json({ error: "Erro ao buscar serviços do setor" });
+    }
+});
+
+
+app.get("/api/setor/:id/evolucao", async (req, res) => {
+    try {
+        const setorId = req.params.id;
+        const ano = parseInt(req.query.ano) || new Date().getFullYear();
+
+        const [rows] = await db.query(
+            `WITH meses AS (
+                SELECT 1 mes UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION
+                SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION
+                SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12
+            )
+            SELECT
+                m.mes,
+                DATE_FORMAT(STR_TO_DATE(CONCAT(?, '-', m.mes, '-01'), '%Y-%m-%d'), '%b') AS mes_nome,
+                COALESCE((
+                    SELECT COUNT(*)
+                    FROM solicitations s
+                    JOIN service_sector ss ON ss.service_id = s.service_id
+                    WHERE ss.sector_id = ?
+                      AND s.tenant_id = 1
+                      AND YEAR(s.created_at) = ?
+                      AND MONTH(s.created_at) = m.mes
+                      AND s.deleted_at IS NULL
+                ),0) AS total
+            FROM meses m
+            ORDER BY m.mes`,
+            [ano, setorId, ano]
+        );
+
+        res.json(rows);
+
+    } catch (e) {
+        console.error("Erro /setor/evolucao:", e);
+        res.status(500).json({ error: "Erro ao carregar evolução do setor" });
+    }
+});
+app.get("/api/setor/:id/status", async (req, res) => {
+    try {
+        const setorId = req.params.id;
+
+        const [rows] = await db.query(
+            `SELECT 
+                s.status,
+                CASE 
+                    WHEN s.status = 0 THEN 'Iniciadas'
+                    WHEN s.status = 2 THEN 'Em espera'
+                    WHEN s.status = 3 THEN 'Respondidas'
+                    WHEN s.status = 1 THEN 'Concluídas'
+                    WHEN s.status = 4 THEN 'Transferidas'
+                    ELSE 'Outros'
+                END AS status_nome,
+                COUNT(*) AS total
+            FROM solicitations s
+            JOIN service_sector ss ON ss.service_id = s.service_id
+            WHERE ss.sector_id = ?
+              AND s.tenant_id = 1
+              AND s.deleted_at IS NULL
+            GROUP BY s.status
+            ORDER BY total DESC`,
+            [setorId]
+        );
+
+        res.json(rows);
+
+
+    } catch (e) {
+        console.error("Erro /setor/status:", e);
+        res.status(500).json({ error: "Erro ao carregar status do setor" });
+    }
+});
+
+/* =============================
+   ✅ Fallback para SPA / arquivos estáticos
+   (mantém compatibilidade com React/Vite)
+============================= */
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api/")) return next();
+  res.sendFile(path.join(__dirname, "index.html"), err => {
+    if (err) next();
+  });
+});
+
+
+/* =============================
+   ✅ 404 Handler
+============================= */
+app.use((req, res) => {
+  logger.error("rota não encontrada", { path: req.originalUrl });
+  res.status(404).json({ error: "Rota não encontrada" });
+});
+
+
+/* =============================
+   ✅ Error Handler Global
+============================= */
+app.use((err, req, res, next) => {
+  logger.error("erro interno", { err });
+  res.status(500).json({ error: "Erro interno no servidor" });
+});
+
+
+/* =============================
+   ✅ START SERVER
+============================= */
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
-  logger.info("Servidor iniciado", { port: PORT });
+  logger.info(`✅ Servidor rodando na porta ${PORT}`, {
+    env: process.env.NODE_ENV || "development"
+  });
 });

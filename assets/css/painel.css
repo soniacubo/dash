@@ -1,6 +1,427 @@
 /* =======================================================
    RESET + BASE
 ======================================================= */
+/* ✅ CARDS ELEVADOS — KPIs PRINCIPAIS */
+.user-stat-card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+  border: 1px solid #eef2f7;
+  text-align: center;
+  transition: all 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* hover suave */
+.user-stat-card:hover {
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.10);
+  transform: translateY(-2px);
+}
+
+/* valor principal */
+.user-stat-card strong {
+  font-size: 1.9rem;
+  font-weight: 700;
+  margin-top: 4px;
+  color: #1e3a8a;
+}
+
+/* subtítulo */
+.kpi__sub {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+/* ajuste das 6 colunas */
+#vg-kpis {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+  width: 100%;
+}
+
+/* responsividade */
+@media (max-width: 1280px) {
+  #vg-kpis {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  #vg-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  #vg-kpis {
+    grid-template-columns: 1fr;
+  }
+}
+/* ===== ECONOMETRO ===== */
+
+.econometro-section {
+  padding-top: 6px;
+}
+
+.economometro-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.economometro-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.economometro-subtitle {
+  color: #6b7280;
+  font-size: .9rem;
+  margin-bottom: 18px;
+}
+
+.economometro-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+/* ===== ECONÔMETRO UPGRADE ===== */
+
+.economometro-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+
+.eco-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 22px 20px;
+  box-shadow: 0 4px 12px rgba(15,23,42,0.06);
+  text-align: center; /* ✅ CENTRALIZA TUDO */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.eco-icon {
+  font-size: 2.4rem;
+  margin-bottom: 10px;
+  line-height: 1;
+}
+
+.eco-title {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.eco-value {
+  font-size: 2.1rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 6px;
+}
+
+.eco-desc {
+  font-size: .85rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* ===== HEADER ===== */
+.economometro-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  margin-bottom: 18px;
+}
+
+/* título agrupado */
+.economometro-title-box {
+  flex: 1;
+  text-align: center;
+}
+
+.economometro-title {
+  font-size: 1.45rem;
+  font-weight: 700;
+  margin: 0;
+  color: #111827;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.info-icon {
+  font-size: .9rem;
+  cursor: help;
+  color: #6b7280;
+}
+
+/* subtítulo */
+.economometro-sub {
+  margin-top: 4px;
+  font-size: .95rem;
+  color: #6b7280;
+}
+
+/* wrapper p/ fixar o select */
+.eco-select-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+/* select minimalista */
+.eco-select {
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  border-radius: 10px;
+  font-size: .9rem;
+  color: #374151;
+  outline: none;
+}
+
+.eco-select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37,99,235,.15);
+}
+
+/* ===== GRID ===== */
+.economometro-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+/* cards */
+.eco-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 22px 20px;
+  text-align: center;
+  box-shadow: 0 4px 10px rgba(15,23,42,0.05);
+}
+
+.eco-title {
+  margin: 8px 0 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.eco-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.eco-desc {
+  font-size: .85rem;
+  color: #6b7280;
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 900px) {
+  .economometro-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .eco-select-wrapper {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .eco-select {
+    width: 100%;
+  }
+
+  .economometro-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* mobile */
+@media (max-width: 900px) {
+  .economometro-grid {
+    grid-template-columns: 1fr;
+  }
+  /* container principal */
+.economometro-header {
+  display: flex;
+  justify-content: space-between; /* ✅ select vai pra direita */
+  align-items: center;
+  width: 100%;
+  justify-content: space-between; 
+  margin-bottom: 16px;
+}
+
+/* bloco do título */
+.economometro-title-box {
+  flex: 1;
+  text-align: center; /* ✅ centraliza perfeitamente */
+}
+
+/* título */
+.economometro-title {
+  font-size: 1.45rem;
+  font-weight: 700;
+  margin: 0;
+  color: #111827;
+}
+
+/* subtítulo */
+.economometro-sub {
+  margin-top: 4px;
+  font-size: .95rem;
+  color: #6b7280;
+}
+
+/* select minimalista */
+.eco-select {
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  border-radius: 8px;
+  font-size: .9rem;
+  color: #374151;
+  outline: none;
+}
+
+.eco-select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, .15);
+}
+
+}
+
+.eco-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 4px 10px rgba(15,23,42,0.05);
+}
+
+.eco-card h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.eco-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 6px;
+}
+
+.eco-desc {
+  font-size: .85rem;
+  color: #6b7280;
+}
+/* tabela do período — alinha TH e TD igualmente */
+.period-table th,
+.period-table td {
+  text-align: center;
+  padding: 10px 8px;
+  vertical-align: middle;
+}
+
+/* deixa o primeiro (Período) alinhado à esquerda se preferir */
+.period-table th:first-child,
+.period-table td:first-child {
+  text-align: left;
+}
+
+/* largura equilibrada das colunas */
+.period-table th {
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.period-table thead th {
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.period-table tbody tr:hover {
+  background: #f3f4f6;
+}
+
+/* responsivo */
+@media (max-width: 900px) {
+  .economometro-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.period-btn {
+  padding: 6px 14px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  border-radius: 6px;
+  font-size: .85rem;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.period-btn:hover {
+  background: #f3f4f6;
+}
+
+.period-btn.active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+  font-weight: 600;
+}
+
+/* ===== TÍTULOS PADRÃO ===== */
+.section-title {
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 10px;
+}
+
+.section-subtitle {
+  text-align: center;
+  font-size: .95rem;
+  color: #6b7280;
+  margin: 4px 0 14px;
+}
+
+.chart-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 2px;
+}
+
+.chart-subtitle {
+  font-size: .85rem;
+  color: #6b7280;
+  margin: 0 0 8px;
+}
 
 * {
     box-sizing: border-box;

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Header from "../components/Header";
+//import SectionTitle from "../components/SectionTitle";
+// removed conflicting import – local SectionTitle component is used below
 import { API_BASE_URL } from "../app";
 import Chart from "chart.js/auto";
 
@@ -9,11 +11,13 @@ import Chart from "chart.js/auto";
 function useCountUp(value: number | undefined, duration = 800) {
   const [display, setDisplay] = useState(0);
 
+
+
   useEffect(() => {
     if (value == null) return;
     const start = 0;
     const end = Number(value);
-    const stepTime = 16;
+    const stepTime = 16; // ~60fps
     const totalSteps = duration / stepTime;
     let currentStep = 0;
 
@@ -105,6 +109,8 @@ const SectionTitle = ({ title, subtitle, infoTooltip }: SectionTitleProps) => {
 ============================================================ */
 export default function Visaogeral() {
   const fmt = useMemo(() => new Intl.NumberFormat("pt-BR"), []);
+
+
   const fmtMoeda = useMemo(
     () =>
       new Intl.NumberFormat("pt-BR", {
@@ -134,15 +140,18 @@ export default function Visaogeral() {
   const miniResolutionRef = useRef<HTMLCanvasElement | null>(null);
   const miniResolutionChartRef = useRef<Chart | null>(null);
 
-  // ✅ NOVO — gráfico empilhado
   const stackedStatusRef = useRef<HTMLCanvasElement | null>(null);
-  const stackedStatusChartRef = useRef<Chart | null>(null);
+const stackedStatusChartRef = useRef<Chart | null>(null);
+
 
   /** ----------------- ESTADOS GERAIS ----------------- */
   const [anos, setAnos] = useState<number[]>([]);
   const [anoSel, setAnoSel] = useState<number>(new Date().getFullYear());
   const [economiaResumo, setEconomiaResumo] = useState<EconomiaResumoRow[]>([]);
   const [economiaTotalAno, setEconomiaTotalAno] = useState<number>(0);
+
+  const [statusPeriodo, setStatusPeriodo] = useState<any[]>([]);
+
 
   const [ecoPeriodo, setEcoPeriodo] = useState<string>("este-mes");
   const [economometro, setEconomometro] = useState<EconomometroData | null>(
@@ -155,16 +164,14 @@ export default function Visaogeral() {
     null
   );
 
-  // ✅ NOVO — guarda valores detalhados para o stacked
   const [taxaDetalhada, setTaxaDetalhada] = useState<{
-    abertas: number;
-    andamento: number;
-    concluidas: number;
-    respondidas: number;
-    total: number;
-  } | null>(null);
+  abertas: number;
+  andamento: number;
+  concluidas: number;
+  respondidas: number;
+} | null>(null);
 
-  /** ----------------- KPIs ----------------- */
+  /** ----------------- KPIs (contadores globais) ----------------- */
   const [kpis, setKpis] = useState<{
     total_servicos?: number;
     total_usuarios?: number;
@@ -189,7 +196,7 @@ export default function Visaogeral() {
     setAnos([y, y - 1, y - 2, y - 3, y - 4]);
   }, []);
 
-  /** ----------------- CONTADORES + CIDADÃOS ----------------- */
+  /** ----------------- CARREGAR CONTADORES & CIDADAOS ----------------- */
   useEffect(() => {
     async function carregarContadores() {
       const r = await fetch(`${API_BASE_URL}/visao-geral/contadores`);
@@ -205,7 +212,7 @@ export default function Visaogeral() {
     carregarCidadaos();
   }, []);
 
-  /** ----------------- GRÁFICO EVOLUÇÃO ----------------- */
+  /** ----------------- GRÁFICO: EVOLUÇÃO DE USO ----------------- */
   useEffect(() => {
     async function evolucao() {
       const r = await fetch(`${API_BASE_URL}/visao-geral/evolucao-uso`);
@@ -270,6 +277,96 @@ export default function Visaogeral() {
     };
   }, []);
 
+  /** ----------------- GRÁFICO: PERFIL (SERVIDORES x CIDADÃOS x REPRESENTANTES) ----------------- */
+  useEffect(() => {
+    async function perfis() {
+      const r = await fetch(`${API_BASE_URL}/visao-geral/contadores`);
+      const k = await r.json();
+      if (!perfilRef.current) return;
+
+      const servidores = Number(k.total_usuarios || 0);
+      const cidadaos = Number(k.total_cidadaos || 0);
+      const representantes = 45000; // mock temporário
+
+      const raw = [servidores, cidadaos, representantes];
+      const display = raw.map((v) => Math.sqrt(Math.max(1, v)));
+
+      if (perfilChartRef.current) perfilChartRef.current.destroy();
+
+      perfilChartRef.current = new Chart(perfilRef.current, {
+        type: "doughnut",
+        data: {
+          labels: ["Servidores", "Cidadãos", "Representantes"],
+          datasets: [
+            {
+              data: display,
+              backgroundColor: ["#2563eb", "#60a5fa", "#93c5fd"],
+              borderColor: "#ffffff",
+              borderWidth: 2,
+              offset: display.map((_, i) => (i === 0 ? 8 : 0)),
+              hoverOffset: 10,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "45%",
+          plugins: {
+            legend: { position: "bottom" },
+            tooltip: {
+              callbacks: {
+                label: (ctx: any) => {
+                  const idx = ctx.dataIndex ?? 0;
+                  const val = raw[idx] ?? 0;
+                  return `${ctx.label}: ${fmt.format(Number(val || 0))}`;
+                },
+              },
+            },
+          },
+        },
+      });
+    }
+
+    perfis();
+    return () => {
+      if (perfilChartRef.current) perfilChartRef.current.destroy();
+    };
+  }, [fmt]);
+
+
+  /** ----------------- ECONÔMETRO ----------------- */
+ useEffect(() => {
+  async function carregarEconomometro() {
+    try {
+      let url = `${API_BASE_URL}/economometro`;
+
+      // ✅ quando for "este-ano" envia ?ano=2025
+      if (ecoPeriodo.includes("ano")) {
+        url += `?ano=${anoSel}`;
+      } else {
+        url += `?periodo=${ecoPeriodo}`;
+      }
+
+      const r = await fetch(url);
+      const data = await r.json();
+
+      setEconomometro({
+        folhas: Math.round(Number(data.folhas || 0)),
+        arvores: Number(data.arvores || 0).toFixed(3),
+        dinheiro: Number(data.dinheiro || 0).toFixed(2),
+      });
+
+    } catch (err) {
+      console.error("Erro ao carregar economometro:", err);
+    }
+  }
+
+  carregarEconomometro();
+}, [ecoPeriodo, anoSel]);
+
+
+
   /** ----------------- GRÁFICO TOP 5 BAIRROS ----------------- */
   useEffect(() => {
     async function carregarTopBairros() {
@@ -280,10 +377,12 @@ export default function Visaogeral() {
         if (!topBairrosRef.current) return;
         if (topBairrosChartRef.current) topBairrosChartRef.current.destroy();
 
+        // manter só 5 bairros
         const listaBairros: string[] = (bairros || [])
           .slice(0, 5)
           .map((b: any) => b.bairro);
 
+        // meses 1..12 fixos
         const mesesFixos = Array.from({ length: 12 }, (_, i) => i + 1);
 
         const labels = mesesFixos.map((m) => {
@@ -298,31 +397,31 @@ export default function Visaogeral() {
         const datasets =
           listaBairros.length > 0
             ? listaBairros.map((bairro, idx) => {
-                const data = mesesFixos.map((m) => {
-                  const row = (meses || []).find(
-                    (r: any) => r.bairro === bairro && r.mes === m
-                  );
-                  return row ? Number(row.total || 0) : 0;
-                });
+              const data = mesesFixos.map((m) => {
+                const row = (meses || []).find(
+                  (r: any) => r.bairro === bairro && r.mes === m
+                );
+                return row ? Number(row.total || 0) : 0;
+              });
 
-                return {
-                  label: bairro,
-                  data,
-                  borderColor: cores[idx],
-                  backgroundColor: "transparent",
-                  borderWidth: 2,
-                  pointRadius: 3,
-                  tension: 0.25,
-                };
-              })
+              return {
+                label: bairro,
+                data,
+                borderColor: cores[idx],
+                backgroundColor: "transparent",
+                borderWidth: 2,
+                pointRadius: 3,
+                tension: 0.25,
+              };
+            })
             : [
-                {
-                  label: "Sem dados",
-                  data: new Array(labels.length).fill(0),
-                  borderColor: "#9ca3af",
-                  backgroundColor: "transparent",
-                },
-              ];
+              {
+                label: "Sem dados",
+                data: new Array(labels.length).fill(0),
+                borderColor: "#9ca3af",
+                backgroundColor: "transparent",
+              },
+            ];
 
         topBairrosChartRef.current = new Chart(topBairrosRef.current, {
           type: "line",
@@ -348,7 +447,7 @@ export default function Visaogeral() {
     };
   }, []);
 
-  /** ----------------- INDICADORES POR PERÍODO ----------------- */
+  /** ----------------- INDICADORES POR PERÍODO (3 MINI-CHARTS) ----------------- */
   useEffect(() => {
     async function carregarIndicadores() {
       const [rServ, rSet, rTaxa] = await Promise.all([
@@ -369,7 +468,7 @@ export default function Visaogeral() {
         rTaxa.json(),
       ]);
 
-      /** Mini gráfico serviços */
+      /** Mini gráfico: serviços mais solicitados */
       if (miniServicesRef.current) {
         if (miniServicesChartRef.current)
           miniServicesChartRef.current.destroy();
@@ -402,12 +501,13 @@ export default function Visaogeral() {
         });
       }
 
-      /** Mini gráfico setores */
+      /** Mini gráfico: setores mais solicitados */
       if (miniSectorsRef.current) {
         if (miniSectorsChartRef.current) miniSectorsChartRef.current.destroy();
 
         const labels = setores.map((s: any) => s.setor || "—");
         const valores = setores.map((s: any) => Number(s.total || 0));
+
         miniSectorsChartRef.current = new Chart(miniSectorsRef.current, {
           type: "bar",
           data: {
@@ -433,7 +533,7 @@ export default function Visaogeral() {
         });
       }
 
-      /** Mini gráfico taxa de resolução */
+      /** Mini gráfico: taxa de resolução */
       if (miniResolutionRef.current) {
         if (miniResolutionChartRef.current)
           miniResolutionChartRef.current.destroy();
@@ -442,19 +542,21 @@ export default function Visaogeral() {
         const andamento = Number(taxa?.andamento || 0);
         const concluidas = Number(taxa?.concluidas || 0);
         const respondidas = Number(taxa?.respondidas || 0);
+        // expõe valores globalmente para usar no componente da barra
+        ; (window as any).__taxa_abertas = abertas;
+        ; (window as any).__taxa_andamento = andamento;
+        ; (window as any).__taxa_respondidas = respondidas;
+        ; (window as any).__taxa_concluidas = concluidas;
 
         const total = abertas + andamento + concluidas + respondidas;
         const media = total > 0 ? (concluidas / total) * 100 : 0;
         setTaxaResolucaoMedia(media);
-
-        // ✅ guarda valores detalhados para o stacked
-        setTaxaDetalhada({
-          abertas,
-          andamento,
-          concluidas,
-          respondidas,
-          total,
-        });
+setTaxaDetalhada({
+  abertas,
+  andamento,
+  concluidas,
+  respondidas,
+});
 
         const labels = ["Abertas", "Em andamento", "Concluídas", "Respondidas"];
         const valores = [abertas, andamento, concluidas, respondidas];
@@ -491,121 +593,82 @@ export default function Visaogeral() {
     };
   }, [periodoIndicadores]);
 
-  /** ✅ NOVO — GRÁFICO EMPILHADO */
-  useEffect(() => {
-if (!stackedStatusRef.current) return;
-if (!taxaDetalhada) return;
+useEffect(() => {
+  if (!stackedStatusRef.current || !taxaDetalhada) return;
 
-    const { abertas, andamento, concluidas, respondidas, total } =
-      taxaDetalhada;
+  const { abertas, andamento, concluidas, respondidas } = taxaDetalhada;
+  const total = abertas + andamento + concluidas + respondidas;
 
-    const pct = (v: number) =>
-      total > 0 ? Number(((v / total) * 100).toFixed(1)) : 0;
+  const pct = (v: number) =>
+    total > 0 ? Number(((v / total) * 100).toFixed(1)) : 0;
 
-    const valueLabelsPlugin = {
-      id: "valueLabels",
-      afterDatasetsDraw(chart: any) {
-        const { ctx } = chart;
-        const datasets = chart.data.datasets || [];
+  if (stackedStatusChartRef.current)
+    stackedStatusChartRef.current.destroy();
 
-        ctx.save();
-        datasets.forEach((dataset: any, datasetIndex: number) => {
-          const meta = chart.getDatasetMeta(datasetIndex);
-          if (!meta || !meta.data || !meta.data[0]) return;
-
-          const bar = meta.data[0];
-          const props = bar.getProps(["x", "y"], true);
-          const value = dataset.data[0] as number;
-          if (!value || value < 5) return;
-
-          ctx.font = "12px system-ui";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-
-          ctx.fillStyle =
-            dataset.label === "Concluídas" ? "#ffffff" : "#111827";
-
-          ctx.fillText(`${value.toFixed(1)}%`, props.x, props.y);
-        });
-        ctx.restore();
-      },
-    };
-if (stackedStatusChartRef.current) {
-  stackedStatusChartRef.current.destroy();
-}
-
-const ctx = stackedStatusRef.current.getContext("2d");
-if (!ctx) return;
-
-stackedStatusChartRef.current = new Chart(ctx, {
-
-      type: "bar",
-      data: {
-        labels: [""],
-        datasets: [
-          {
-            label: "Iniciadas",
-            data: [pct(abertas)],
-            backgroundColor: "#CCFCE3",
-            borderColor: "#ffffff",
-            borderWidth: 1,
-          },
-          {
-            label: "Em espera",
-            data: [pct(andamento)],
-            backgroundColor: "#FFEFC2",
-            borderColor: "#ffffff",
-            borderWidth: 1,
-          },
-          {
-            label: "Respondidas",
-            data: [pct(respondidas)],
-            backgroundColor: "#CFE4FF",
-            borderColor: "#ffffff",
-            borderWidth: 1,
-          },
-          {
-            label: "Concluídas",
-            data: [pct(concluidas)],
-            backgroundColor: "#1B7F52",
-            borderColor: "#ffffff",
-            borderWidth: 1,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        indexAxis: "y",
-        plugins: {
-          legend: { position: "bottom" },
-          tooltip: {
-            callbacks: {
-              label: (ctx: any) => `${ctx.dataset.label}: ${ctx.parsed.x}%`,
-            },
+  stackedStatusChartRef.current = new Chart(stackedStatusRef.current, {
+    type: "bar",
+    data: {
+      labels: [""],
+      datasets: [
+        {
+          label: "Iniciadas",
+          data: [pct(abertas)],
+          backgroundColor: "#CCFCE3",
+        },
+        {
+          label: "Em espera",
+          data: [pct(andamento)],
+          backgroundColor: "#FFEFC2",
+        },
+        {
+          label: "Respondidas",
+          data: [pct(respondidas)],
+          backgroundColor: "#CFE4FF",
+        },
+        {
+          label: "Concluídas",
+          data: [pct(concluidas)],
+          backgroundColor: "#1B7F52",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: "y",
+      plugins: {
+        legend: {
+          position: "bottom",
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx) =>
+              `${ctx.dataset.label}: ${ctx.parsed.x}%`,
           },
         },
-        scales: {
-          x: {
-            min: 0,
-            max: 100,
-            stacked: true,
-            ticks: { callback: (v: any) => `${v}%` },
-          },
-          y: { stacked: true, grid: { display: false } },
-        },
       },
-      plugins: [valueLabelsPlugin as any],
-    });
+      scales: {
+        x: {
+          min: 0,
+          max: 100,
+          stacked: true,
+          ticks: { callback: (v) => `${v}%` },
+        },
+        y: { stacked: true },
+      },
+    },
+  });
 
-    return () => {
-      if (stackedStatusChartRef.current) {
-        stackedStatusChartRef.current.destroy();
-      }
-    };
-  }, [taxaDetalhada]);
+  return () => {
+    if (stackedStatusChartRef.current)
+      stackedStatusChartRef.current.destroy();
+  };
+}, [taxaDetalhada]);
 
-  /** ----------------- RESUMO POR ANO ----------------- */
+
+
+
+  /** ----------------- RESUMO POR ANO (TABELA + ECONOMIA TOTAL) ----------------- */
   useEffect(() => {
     async function carregarResumoAno() {
       const r = await fetch(`${API_BASE_URL}/resumo-periodo?ano=${anoSel}`);
@@ -622,7 +685,7 @@ stackedStatusChartRef.current = new Chart(ctx, {
     carregarResumoAno();
   }, [anoSel]);
 
-  /** ----------------- DERIVADOS ----------------- */
+  /** ----------------- DERIVADOS PARA RENDERIZAÇÃO ----------------- */
   const eficienciaFmt =
     kpis.eficiencia_pct != null
       ? `${Number(kpis.eficiencia_pct).toFixed(1)}%`
@@ -650,7 +713,7 @@ stackedStatusChartRef.current = new Chart(ctx, {
       </section>
 
       {/* KPIs PRINCIPAIS */}
-      <section className="dash-section">
+      <section className="dash-section" aria-labelledby="kpi-title">
         <SectionTitle
           title="Indicadores principais"
           subtitle="Indicadores gerais de serviços, usuários, cidadãos e setores"
@@ -658,6 +721,7 @@ stackedStatusChartRef.current = new Chart(ctx, {
 
         <div
           className="card-deck"
+          id="vg-kpis"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(6, 1fr)",
@@ -667,32 +731,40 @@ stackedStatusChartRef.current = new Chart(ctx, {
         >
           <div className="user-stat-card">
             Eficiência média
-            <strong>{eficienciaFmt}</strong>
+            <strong id="vg-eficiencia">{eficienciaFmt}</strong>
           </div>
 
           <div className="user-stat-card">
             Qualidade média
-            <strong>{qualidadeFmt}</strong>
+            <strong id="vg-qualidade">{qualidadeFmt}</strong>
           </div>
 
           <div className="user-stat-card">
             Serviços cadastrados
-            <strong>{fmt.format(countServicos || 0)}</strong>
+            <strong id="vg-servicos">
+              {fmt.format(countServicos || 0)}
+            </strong>
           </div>
 
           <div className="user-stat-card">
             Usuários (servidores)
-            <strong>{fmt.format(countUsuarios || 0)}</strong>
+            <strong id="vg-usuarios">
+              {fmt.format(countUsuarios || 0)}
+            </strong>
           </div>
 
           <div className="user-stat-card kpi-cidadaos">
             Cidadãos (contas)
-            <strong>{fmt.format(countCidadaos || 0)}</strong>
+            <strong id="vg-cidadaos-total">
+              {fmt.format(countCidadaos || 0)}
+            </strong>
           </div>
 
           <div className="user-stat-card">
             Setores
-            <strong>{fmt.format(countSetores || 0)}</strong>
+            <strong id="vg-setores">
+              {fmt.format(countSetores || 0)}
+            </strong>
           </div>
         </div>
       </section>
@@ -736,6 +808,7 @@ stackedStatusChartRef.current = new Chart(ctx, {
           </div>
         </div>
 
+        {/* seletor de período alinhado à direita, logo abaixo dos cards */}
         <div
           style={{
             marginTop: 12,
@@ -744,6 +817,7 @@ stackedStatusChartRef.current = new Chart(ctx, {
           }}
         >
           <select
+            id="eco-periodo-select"
             className="eco-select"
             value={ecoPeriodo}
             onChange={(e) => setEcoPeriodo(e.target.value)}
@@ -757,15 +831,15 @@ stackedStatusChartRef.current = new Chart(ctx, {
         </div>
       </section>
 
-      {/* EVOLUÇÃO + BAIRROS */}
+      {/* GRÁFICOS PRINCIPAIS: EVOLUÇÃO + BAIRROS */}
       <section className="dash-section" style={{ marginTop: 4 }}>
         <SectionTitle
           title="Indicadores mensais de uso e origem das solicitações"
           subtitle="Evolução do volume total de demanda e participação dos bairros ao longo dos meses"
         />
 
-        <div style={{ display: "flex", gap: 16 }}>
-          <div style={{ flex: 1 }}>
+        <div className="section-content-flex" style={{ display: "flex", gap: 16 }}>
+          <div className="ranking-box" style={{ flex: 1 }}>
             <h3 className="chart-title">Evolução de uso (últimos 12 meses)</h3>
             <p className="chart-subtitle">Volume mensal de solicitações/processos</p>
             <div className="chart-container" style={{ height: 330 }}>
@@ -773,7 +847,7 @@ stackedStatusChartRef.current = new Chart(ctx, {
             </div>
           </div>
 
-          <div style={{ flex: 1 }}>
+          <div className="ranking-box" style={{ flex: 1 }}>
             <h3 className="chart-title">Bairros que mais solicitam</h3>
             <p className="chart-subtitle">Evolução mensal por bairro</p>
             <div className="chart-container" style={{ height: 330 }}>
@@ -783,14 +857,16 @@ stackedStatusChartRef.current = new Chart(ctx, {
         </div>
       </section>
 
-      {/* ✅ NOVA SEÇÃO ATUALIZADA */}
       <section className="dash-section dash-period-indicators">
+
+        {/* TÍTULO CENTRALIZADO */}
         <div style={{ textAlign: "center", marginBottom: 12 }}>
           <SectionTitle
             title="Indicadores por Período"
             subtitle="Serviços e setores mais demandados no intervalo selecionado"
           />
 
+          {/* BOTÕES ABAIXO DO TÍTULO */}
           <div
             className="period-filter"
             style={{
@@ -812,9 +888,8 @@ stackedStatusChartRef.current = new Chart(ctx, {
             ].map((p) => (
               <button
                 key={p.value}
-                className={`period-btn ${
-                  periodoIndicadores === p.value ? "active" : ""
-                }`}
+                className={`period-btn ${periodoIndicadores === p.value ? "active" : ""
+                  }`}
                 onClick={() => setPeriodoIndicadores(p.value as Periodo)}
               >
                 {p.label}
@@ -823,7 +898,7 @@ stackedStatusChartRef.current = new Chart(ctx, {
           </div>
         </div>
 
-        {/* SERVIÇOS + SETORES */}
+        {/* DOIS GRÁFICOS LADO A LADO E MAIORES */}
         <div
           style={{
             display: "grid",
@@ -833,107 +908,106 @@ stackedStatusChartRef.current = new Chart(ctx, {
             marginTop: 20,
           }}
         >
+          {/* SERVIÇOS */}
           <article className="period-card" style={{ height: 340 }}>
-            <header>
+            <header className="period-card-header">
               <h3>Serviços mais solicitados</h3>
-              <span>Top 5 por volume</span>
+              <span className="period-card-subtitle">Top 5 por volume</span>
             </header>
             <div className="period-card-body">
-              <div style={{ height: "100%" }}>
+              <div className="mini-chart-wrapper" style={{ height: "100%" }}>
                 <canvas ref={miniServicesRef}></canvas>
               </div>
             </div>
           </article>
 
+          {/* SETORES */}
           <article className="period-card" style={{ height: 340 }}>
-            <header>
+            <header className="period-card-header">
               <h3>Setores mais solicitados</h3>
-              <span>Top 5 por volume</span>
+              <span className="period-card-subtitle">Top 5 por volume</span>
             </header>
             <div className="period-card-body">
-              <div style={{ height: "100%" }}>
+              <div className="mini-chart-wrapper" style={{ height: "100%" }}>
                 <canvas ref={miniSectorsRef}></canvas>
               </div>
             </div>
           </article>
         </div>
+'
 
-        {/* ✅ GRÁFICO EMPILHADO */}
-        <div
-          style={{
-            width: "100%",
-            maxWidth: 900,
-            height: 140,
-            margin: "28px auto 0",
-          }}
-        >
-          <canvas ref={stackedStatusRef}></canvas>
-        </div>
+<div
+  style={{
+    width: "100%",
+    height: 160,
+    marginTop: 24,
+  }}
+>
+  <canvas ref={stackedStatusRef}></canvas>
+</div>
+'
+        {/* KPI CENTRALIZADO EMBAIXO */}
+       {/* KPI CENTRALIZADO EMBAIXO */}
+  <div
+    style={{
+      marginTop: 32,
+      textAlign: "center",
+    }}
+  >
+    <span
+      className="kpi-value"
+      style={{
+        fontSize: "2.6rem",
+        fontWeight: 700,
+        color: "#111827",
+      }}
+    >
+      {taxaResolucaoMediaFmt}
+    </span>
+    <div
+      className="kpi-label"
+      style={{ fontSize: ".95rem", color: "#6b7280", marginTop: 4 }}
+    >
+      taxa média de resolução no período
+    </div>
+  </div>
 
-        <div
-          style={{
-            marginTop: 8,
-            textAlign: "center",
-            fontSize: ".9rem",
-            color: "#6b7280",
-          }}
-        >
-          {taxaDetalhada
-            ? `Total no período: ${fmt.format(
-                taxaDetalhada.total
-              )} solicitações`
-            : "Total no período: --"}
-        </div>
-
-        {/* KPI FINAL */}
-        <div style={{ marginTop: 32, textAlign: "center" }}>
-          <span
-            className="kpi-value"
-            style={{
-              fontSize: "2.6rem",
-              fontWeight: 700,
-              color: "#111827",
-            }}
-          >
-            {taxaResolucaoMediaFmt}
-          </span>
-          <div
-            className="kpi-label"
-            style={{ fontSize: ".95rem", color: "#6b7280", marginTop: 4 }}
-          >
-            taxa média de resolução no período
-          </div>
-        </div>
       </section>
 
-      {/* TABELA FINAL */}
-      <section className="dash-section period-section">
-        <div style={{ textAlign: "center", marginBottom: 16 }}>
-          <SectionTitle
-            title="Dados do período por ano"
-            subtitle="Consolidados mensais de solicitações, pessoas atendidas, notificações, tramitações e economia gerada"
-          />
 
-          <div
-            style={{
-              marginTop: 8,
-              display: "flex",
-              justifyContent: "flex-end",
-            }}
-          >
-            <select
-              className="eco-select"
-              value={String(anoSel)}
-              onChange={(e) => setAnoSel(Number(e.target.value))}
-            >
-              {anos.map((a) => (
-                <option key={a} value={a}>
-                  {a}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+      {/* TABELA FINAL: RESUMO DO ANO */}
+     <section className="dash-section period-section">
+
+  {/* TÍTULO CENTRALIZADO + SELECT LINHA ABAIXO, IGUAL AO PADRÃO */}
+  <div style={{ textAlign: "center", marginBottom: 16 }}>
+    <SectionTitle
+      title="Dados do período por ano"
+      subtitle="Consolidados mensais de solicitações, pessoas atendidas, notificações, tramitações e economia gerada"
+    />
+
+    {/* SELECT ALINHADO À DIREITA, COMO NO ECONÔMETRO */}
+    <div
+      style={{
+        marginTop: 8,
+        display: "flex",
+        justifyContent: "flex-end",
+      }}
+    >
+      <select
+        id="vg-ano-select"
+        className="eco-select"
+        value={String(anoSel)}
+        onChange={(e) => setAnoSel(Number(e.target.value))}
+      >
+        {anos.map((a) => (
+          <option key={a} value={a}>
+            {a}
+          </option>
+        ))}
+      </select>
+    </div>
+  </div>
+
 
         <div className="table-wrapper">
           <table className="period-table">
@@ -941,23 +1015,28 @@ stackedStatusChartRef.current = new Chart(ctx, {
               <tr>
                 <th>Período</th>
                 <th>
-                  Solicitações <br />
+                  Solicitações
+                  <br />
                   <span>Geradas</span>
                 </th>
                 <th>
-                  Pessoas Atendidas <br />
+                  Pessoas Atendidas
+                  <br />
                   <span>Únicas</span>
                 </th>
                 <th>
-                  Notificações <br />
+                  Notificações
+                  <br />
                   <span>Total</span>
                 </th>
                 <th>
-                  Tramitações <br />
+                  Tramitações
+                  <br />
                   <span>Total</span>
                 </th>
                 <th>
-                  💰 Economia Gerada <br />
+                  💰 Economia Gerada
+                  <br />
                   <span>Total</span>
                 </th>
               </tr>
