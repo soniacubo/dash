@@ -1,0 +1,13 @@
+* [33meda3e0c[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Atualização completa - sobrescrevendo main remota
+* [33m39c087f[m first commit
+* [33mae85dba[m VisaoGeral: corrige TS de offset; Header com NavLink; KPIs 4x4; donut perfis; Setores: ranking com ícones e tooltip, top serviços; tabela com Usuários/Serviços/Eficiência/Engajamento/Qualidade;
+* [33m8de6543[m VisaoGeral: cards e gráfico; Header; layout 4x4; Setores: rankings e tabela; CSS tooltip sem borda
+*   [33m2e77d86[m Merge pull request #1 from cubo-tecnologia/feat/react-tsx-migration-a11y
+[32m|[m[33m\[m  
+[32m|[m * [33m68164e3[m[33m ([m[1;31morigin/feat/react-tsx-migration-a11y[m[33m)[m UX/A11y: tags semânticas (header/nav/main/footer); scope=col e foco visível em tabelas; tooltips acessíveis (focus/keyboard); Setores: corrigir ícones de toggle e lógica; painel de usuários com debounce+cache; corrigir JSX retornando múltiplas linhas com fragmento
+[32m|[m * [33m355581b[m Frontend: migrar páginas para React TSX com rotas; configurar Vite e scripts dev:all; transferir lógicas dos .html (Visão Geral, Usuários, Setores); gráficos com Chart.js; rankings e tabela hierárquica de setores; centralizar CSS; criar tsconfig/index.html/src/main.tsx; ajustar API_BASE_URL e .env (ALLOWED_ORIGINS)
+[32m|[m * [33meb72a78[m Front-end: CSS centralizado em assets/css/painel.css; remover estilos inline em setores/usuarios; nav ativo via assets/js/nav.js; corrigir id duplicado em visaogeral; remover Chart.js duplicado; limpar erro HTML em usuarios
+[32m|[m * [33m2a8c88d[m Arquitetura: unificar base de API nos JS; remover rota duplicada de evolucao-uso; servir estáticos com cache; scripts start/dev no package.json
+[32m|[m * [33mcf5cb2f[m Segurança: usar variáveis de ambiente para MySQL; CORS restrito; Helmet e rate limiting; remoção de logs sensíveis; validação de datas em rotas; logger estruturado básico
+[32m|[m[32m/[m  
+* [33m819aab1[m[33m ([m[1;31morigin/develop[m[33m)[m Primeiro commit - estrutura inicial do projeto MVP-INDICADORES
