@@ -1895,43 +1895,43 @@ app.get("/api/visao-geral", async (req, res) => {
  * Gráfico que aparece abaixo dos KPIs da visão geral.
  * ============================================================
  */
-app.get("/api/visao-geral/series", async (req, res) => {
-  try {
-    const ano = Number(req.query.ano) || new Date().getFullYear();
+// app.get("/api/visao-geral/series", async (req, res) => {
+//   try {
+//     const ano = Number(req.query.ano) || new Date().getFullYear();
 
-    const [serie] = await db.query(
-      `
-      SELECT
-          MONTH(s.created_at) AS mes,
-          COUNT(*) AS geradas,
-          SUM(CASE WHEN s.status = 1 THEN 1 END) AS concluidas
-      FROM jp_conectada.solicitations s
-      WHERE s.tenant_id = ?
-        AND YEAR(s.created_at) = ?
-      GROUP BY MONTH(s.created_at)
-      ORDER BY mes
-      `,
-      [TENANT_ID, ano]
-    );
+//     const [serie] = await db.query(
+//       `
+//       SELECT
+//           MONTH(s.created_at) AS mes,
+//           COUNT(*) AS geradas,
+//           SUM(CASE WHEN s.status = 1 THEN 1 END) AS concluidas
+//       FROM jp_conectada.solicitations s
+//       WHERE s.tenant_id = ?
+//         AND YEAR(s.created_at) = ?
+//       GROUP BY MONTH(s.created_at)
+//       ORDER BY mes
+//       `,
+//       [TENANT_ID, ano]
+//     );
 
-    const [logins] = await db.query(
-      `
-      SELECT MONTH(last_login_at) AS mes, COUNT(*) AS total
-      FROM jp_conectada.users
-      WHERE tenant_id = ?
-        AND YEAR(last_login_at) = ?
-      GROUP BY mes
-      `,
-      [TENANT_ID, ano]
-    );
+//     const [logins] = await db.query(
+//       `
+//       SELECT MONTH(last_login_at) AS mes, COUNT(*) AS total
+//       FROM jp_conectada.users
+//       WHERE tenant_id = ?
+//         AND YEAR(last_login_at) = ?
+//       GROUP BY mes
+//       `,
+//       [TENANT_ID, ano]
+//     );
 
-    res.json({ ano, solicitacoes: serie, logins });
+//     res.json({ ano, solicitacoes: serie, logins });
 
-  } catch (err) {
-    console.error("Erro visao-geral/series:", err);
-    res.status(500).json({ error: "Erro ao carregar séries" });
-  }
-});
+//   } catch (err) {
+//     console.error("Erro visao-geral/series:", err);
+//     res.status(500).json({ error: "Erro ao carregar séries" });
+//   }
+// });
 
 
 
