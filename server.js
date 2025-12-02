@@ -1,49 +1,61 @@
+// =========================================================
+// 🌐 IMPORTS / CONFIGURAÇÕES
+// =========================================================
 const express = require("express");
 const mysql = require("mysql2/promise");
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const path = require("path");
 require("dotenv").config();
 
 const app = express();
 const TENANT_ID = 1;
-const isDev = process.env.NODE_ENV !== "production";
 
+
+// =========================================================
+// 🔐 CORS — VERCEL + RENDER + LOCALHOST
+// =========================================================
 const allowedOrigins = [
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
   "https://dash-lovat-alpha.vercel.app",
   "https://dash-backend-vhh1.onrender.com",
-  "http://localhost:3000",
-  ...(process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(",").map(s => s.trim())
-    : [])
+  ...(process.env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map(s => s.trim())
+    .filter(Boolean)
 ];
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (isDev) return callback(null, true);
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error("CORS Blocked: " + origin));
-    },
-    credentials: true,
-    exposedHeaders: ["Content-Length", "Content-Type"]
-  })
-);
+const corsOptions = {
+  origin(origin, callback) {
+    const isDev = process.env.NODE_ENV !== "production";
 
+    // Permite tudo em dev
+    if (isDev) return callback(null, true);
+
+    // Health checks do Render NÃO enviam origin → liberar
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error("CORS block: " + origin));
+  },
+  credentials: true
+};
 
 app.use(cors(corsOptions));
-
-/* Segurança */
 app.use(helmet());
 app.use(express.json());
 app.set("trust proxy", 1);
 app.use(rateLimit({ windowMs: 60 * 1000, max: 300 }));
 
-/* -------------------------------------------------------
-   🗄 MYSQL
-------------------------------------------------------- */
 
+// =========================================================
+// 🗄 MYSQL POOL
+// =========================================================
 const db = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -52,7 +64,6 @@ const db = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10
 });
-
 
 /* -------------------------------------------------------
    🔥 ROTA DE TESTE (AGORA EXISTE)
@@ -1745,10 +1756,6 @@ app.get("/api/setor/:id/status", async (req, res) => {
 /* -------------------------------------------------------
    404
 ------------------------------------------------------- */
-app.use((req, res) => {
-  res.status(404).json({ error: "Rota não encontrada" });
-});
-
 /* -------------------------------------------------------
    GLOBAL ERROR HANDLER
 ------------------------------------------------------- */
@@ -1756,11 +1763,18 @@ app.use((err, req, res, next) => {
   console.error("Erro:", err);
   res.status(500).json({ error: "Erro interno" });
 });
+app.all("(.*)", (req, res) => {
+  res.status(404).json({ error: "Rota não encontrada" });
+});
 
-/* -------------------------------------------------------
-   START
-------------------------------------------------------- */
+
+// =========================================================
+// 🚀 START SERVER
+// =========================================================
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT} — modo ${isDev ? "DEV" : "PROD"}`);
+  console.log(`🚀 Servidor rodando na porta ${PORT}`, {
+    env: process.env.NODE_ENV || "development"
+  });
 });
