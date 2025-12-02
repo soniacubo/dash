@@ -3,49 +3,37 @@ const mysql = require("mysql2/promise");
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
-const path = require("path");
 require("dotenv").config();
 
 const app = express();
 const TENANT_ID = 1;
 
-/* ============================================================
-   🔐 CORS CONFIG
-============================================================ */
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
-  .split(",")
-  .map(s => s.trim())
-  .filter(Boolean);
-
-const corsOptions = {
-  origin(origin, callback) {
-    const isDev = process.env.NODE_ENV !== "production";
-
-    if (isDev) {
-      return callback(null, true);
-    }
-
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-
-    return callback(new Error("Not allowed by CORS"));
-  },
-  credentials: true
-};
-
-app.use(cors(corsOptions));
-app.use(helmet());
 app.use(express.json());
 app.set("trust proxy", 1);
-app.use(rateLimit({ windowMs: 60 * 1000, max: 300 }));
 
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
+  app.use(helmet());
+app.use(
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: 300,
+  })
+);const logger = {
+  info: (msg, meta) =>
+    console.log(JSON.stringify({ level: "info", msg, ...meta })),
+  error: (msg, meta) =>
+    console.error(JSON.stringify({ level: "error", msg, ...meta })),
+};
 /* ============================================================
    📦 LOGGER
 ============================================================ */
-const logger = {
-  info: (msg, meta) => console.log(JSON.stringify({ level: "info", msg, ...meta })),
-  error: (msg, meta) => console.error(JSON.stringify({ level: "error", msg, ...meta }))
-};
 
 /* ============================================================
    🗄️ MYSQL — POOL ÚNICO
@@ -399,45 +387,45 @@ app.get("/api/visao-geral/series", async (req, res) => {
 });
 
 
-app.get("/api/visao-geral/evolucao-uso", async (req, res) => {
-  try {
-    const sql = `
-      SELECT
-        DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n MONTH), '%Y-%m-01') AS mes_iso,
+// app.get("/api/visao-geral/evolucao-uso", async (req, res) => {
+//   try {
+//     const sql = `
+//       SELECT
+//         DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n MONTH), '%Y-%m-01') AS mes_iso,
 
-        (
-          SELECT COUNT(*)
-          FROM jp_conectada.solicitations s
-          WHERE tenant_id = ?
-            AND s.created_at >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n MONTH), '%Y-%m-01')
-            AND s.created_at <  DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n-1 MONTH), '%Y-%m-01')
-        ) AS abertas,
+//         (
+//           SELECT COUNT(*)
+//           FROM jp_conectada.solicitations s
+//           WHERE tenant_id = ?
+//             AND s.created_at >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n MONTH), '%Y-%m-01')
+//             AND s.created_at <  DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n-1 MONTH), '%Y-%m-01')
+//         ) AS abertas,
 
-        (
-          SELECT COUNT(*)
-          FROM jp_conectada.solicitations s2
-          WHERE s2.tenant_id = ?
-            AND s2.status = 1
-            AND s2.updated_at >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n MONTH), '%Y-%m-01')
-            AND s2.updated_at <  DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n-1 MONTH), '%Y-%m-01')
-        ) AS concluidas
+//         (
+//           SELECT COUNT(*)
+//           FROM jp_conectada.solicitations s2
+//           WHERE s2.tenant_id = ?
+//             AND s2.status = 1
+//             AND s2.updated_at >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n MONTH), '%Y-%m-01')
+//             AND s2.updated_at <  DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n-1 MONTH), '%Y-%m-01')
+//         ) AS concluidas
 
-      FROM (
-        SELECT 11 AS n UNION ALL SELECT 10 UNION ALL SELECT 9 UNION ALL SELECT 8 UNION ALL
-        SELECT 7 UNION ALL SELECT 6 UNION ALL SELECT 5 UNION ALL SELECT 4 UNION ALL
-        SELECT 3 UNION ALL SELECT 2 UNION ALL SELECT 1 UNION ALL SELECT 0
-      ) seq
-      ORDER BY mes_iso
-    `;
+//       FROM (
+//         SELECT 11 AS n UNION ALL SELECT 10 UNION ALL SELECT 9 UNION ALL SELECT 8 UNION ALL
+//         SELECT 7 UNION ALL SELECT 6 UNION ALL SELECT 5 UNION ALL SELECT 4 UNION ALL
+//         SELECT 3 UNION ALL SELECT 2 UNION ALL SELECT 1 UNION ALL SELECT 0
+//       ) seq
+//       ORDER BY mes_iso
+//     `;
 
-    const [rows] = await db.query(sql, [TENANT_ID, TENANT_ID]);
-    res.json(rows);
+//     const [rows] = await db.query(sql, [TENANT_ID, TENANT_ID]);
+//     res.json(rows);
 
-  } catch (err) {
-    console.error("Erro /evolucao-uso:", err);
-    res.status(500).json({ error: "Falha ao carregar evolução de uso" });
-  }
-});
+//   } catch (err) {
+//     console.error("Erro /evolucao-uso:", err);
+//     res.status(500).json({ error: "Falha ao carregar evolução de uso" });
+//   }
+// });
 
 
 app.get("/api/visao-geral/economia", async (req, res) => {
@@ -1741,36 +1729,29 @@ app.get("/api/setor/:id/status", async (req, res) => {
 });
 
 
-
-/* =============================
-   ✅ 404 Handler
-============================= */
+/* ============================================================
+   ❌ 404 Handler
+============================================================ */
 app.use((req, res) => {
   logger.error("rota não encontrada", { path: req.originalUrl });
   res.status(404).json({ error: "Rota não encontrada" });
 });
 
-
-/* =============================
-   ✅ Error Handler Global
-============================= */
+/* ============================================================
+   🚨 Error Handler Global
+============================================================ */
 app.use((err, req, res, next) => {
   logger.error("erro interno", { err });
   res.status(500).json({ error: "Erro interno no servidor" });
 });
 
-
-/* =============================
-   ✅ START SERVER
-============================= */
-/* ================================
-   ✅ START SERVER
-================================= */
-
+/* ============================================================
+   🚀 START SERVER
+============================================================ */
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, "0.0.0.0", () => {
   logger.info(`🚀 Servidor rodando na porta ${PORT}`, {
-    env: process.env.NODE_ENV || "development"
+    env: process.env.NODE_ENV || "development",
   });
 });
