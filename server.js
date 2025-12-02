@@ -31,8 +31,8 @@ app.use(
   })
 );
 
-/* NECESSÁRIO para CORS pré-flight (OPTIONS) */
-app.options("*", cors());
+
+app.use(cors(corsOptions));
 
 /* Segurança */
 app.use(helmet());
