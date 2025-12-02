@@ -1,9 +1,3 @@
-/**
- * ============================================================
- *  SERVER PRINCIPAL — ORGANIZADO POR SEÇÕES
- * ============================================================
- */
-
 const express = require("express");
 const mysql = require("mysql2/promise");
 const cors = require("cors");
@@ -75,10 +69,6 @@ function brToMySQL(dateBR) {
   return `${y}-${m}-${d}`;
 }
 
-/**
- * Converte o período (today, 7d, 30d, 6m, 1y, etc.)
- * para datas de início e fim.
- */
 function getPeriodoDates(periodoRaw) {
   const periodo = String(periodoRaw || "30d");
   const agora = new Date();
@@ -136,9 +126,6 @@ function getPeriodoDates(periodoRaw) {
   return { inicio, fim, diasPeriodo, periodo };
 }
 
-/**
- * Para filtros tipo: 7d, 30d, 6m, 1y
- */
 function getStartDateFromPeriod(periodKey) {
   const now = new Date();
   now.setHours(23, 59, 59, 999);
@@ -157,20 +144,127 @@ function getStartDateFromPeriod(periodKey) {
   return `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,"0")}-${String(start.getDate()).padStart(2,"0")} 00:00:00`;
 }
 
-/* ============================================================
-   🧱 A PARTIR DAQUI VÊM AS ROTAS — NAS PRÓXIMAS PARTES
-============================================================ */
+// app.get("/api/visao-geral/totais", async (req, res) => {
+//   try {
+//     const tenantId = TENANT_ID;
 
-/* ============================================================
-   📊 ROTAS — VISÃO GERAL
-============================================================ */
+//     /* ---------------------- SERVIÇOS ---------------------- */
+//     const [[serv]] = await db.query(
+//       `SELECT COUNT(*) AS total FROM jp_conectada.services WHERE tenant_id = ? AND active = 1`,
+//       [tenantId]
+//     );
 
-/**
- * ============================================================
- * 1) VISÃO GERAL PRINCIPAL — /api/visao-geral
- * ============================================================
- */
-// app.get("/api/visao-geral", async (req, res) => {
+//     /* ---------------------- SETORES ----------------------- */
+//     const [[secs]] = await db.query(
+//       `SELECT COUNT(*) AS total FROM jp_conectada.sectors WHERE tenant_id = ? AND active = 1`,
+//       [tenantId]
+//     );
+
+//     /* ---------------------- USUÁRIOS ---------------------- */
+//     const [[users]] = await db.query(
+//       `
+//       SELECT COUNT(DISTINCT u.id) AS total
+//       FROM jp_conectada.users u
+//       LEFT JOIN jp_conectada.sector_user su ON su.user_id = u.id
+//       WHERE u.tenant_id = ? AND u.active = 1
+//       `,
+//       [tenantId]
+//     );
+
+//     /* ---------------------- CIDADÃOS ---------------------- */
+//     let totalCid = 0;
+//     try {
+//       const [[cid]] = await db.query(
+//         `SELECT COUNT(*) AS total FROM jp_conectada.citizens WHERE tenant_id = ?`,
+//         [tenantId]
+//       );
+//       totalCid = cid.total;
+//     } catch {
+//       totalCid = 0;
+//     }
+
+//     /* ---------------------- EFICIÊNCIA ---------------------- */
+//     const [[ef]] = await db.query(
+//       `
+//       SELECT
+//         COUNT(*) AS total,
+//         SUM(CASE WHEN s.status = 1 THEN 1 END) AS concluidas,
+//         SUM(CASE WHEN s.status = 2 THEN 1 END) AS respondidas
+//       FROM jp_conectada.solicitations s
+//       WHERE s.tenant_id = ?
+//       `,
+//       [tenantId]
+//     );
+
+//     const totalSol = ef.total || 0;
+//     const concluidas = ef.concluidas || 0;
+//     const respondidas = ef.respondidas || 0;
+
+//     const eficienciaPct = totalSol > 0 ? (concluidas / totalSol) * 100 : 0;
+
+//     const abertasNaoConcl = Math.max(totalSol - concluidas, 0);
+//     let respondidasNaoConcl = Math.max(respondidas - concluidas, 0);
+
+//     const engajamentoPct = abertasNaoConcl > 0
+//       ? (respondidasNaoConcl / abertasNaoConcl) * 100
+//       : 0;
+
+//     /* ---------------------- QUALIDADE ---------------------- */
+//     let qualidadeMedia = 0, totalAvaliacoes = 0;
+
+//     try {
+//       const [[qual]] = await db.query(
+//         `
+//         SELECT AVG(av.score) AS nota_media, COUNT(*) AS total
+//         FROM jp_conectada.service_evaluations av
+//         JOIN jp_conectada.solicitations s ON s.id = av.solicitation_id
+//         WHERE s.tenant_id = ?
+//         `,
+//         [tenantId]
+//       );
+
+//       qualidadeMedia = qual.nota_media || 0;
+//       totalAvaliacoes = qual.total || 0;
+
+//     } catch (err) {
+//       qualidadeMedia = 0;
+//       totalAvaliacoes = 0;
+//     }
+
+//     /* ---------------------- ECONOMIA ---------------------- */
+//     const P_PAGINAS = 4;
+//     const C_PAGINA = 0.35;
+//     const C_MANUSEIO = 0.80;
+
+//     const economiaRS = totalSol * (P_PAGINAS * C_PAGINA + C_MANUSEIO);
+
+//     res.json({
+//       totais: {
+//         servicos: serv.total,
+//         setores: secs.total,
+//         usuarios: users.total,
+//         cidadaos: totalCid
+//       },
+//       desempenho: {
+//         eficiencia_pct: Number(eficienciaPct.toFixed(1)),
+//         engajamento_pct: Number(engajamentoPct.toFixed(1)),
+//         qualidade_media: Number(qualidadeMedia.toFixed(2)),
+//         total_avaliacoes: totalAvaliacoes
+//       },
+//       economia: {
+//         estimada_rs: Number(economiaRS.toFixed(2)),
+//         parametros: { P_PAGINAS, C_PAGINA, C_MANUSEIO }
+//       }
+//     });
+
+//   } catch (e) {
+//     console.error(e);
+//     res.status(500).json({ error: "Erro ao carregar visão geral" });
+//   }
+// });
+
+
+// app.get("/api/visao-geral/totais", async (req, res) => {
 //   try {
 //     const tenant = TENANT_ID;
 
@@ -263,11 +357,6 @@ function getStartDateFromPeriod(periodKey) {
 // });
 
 
-/**
- * ============================================================
- * 2) SÉRIES MENSAIS — SOLICITAÇÕES x CONCLUÍDAS
- * ============================================================
- */
 app.get("/api/visao-geral/series", async (req, res) => {
   try {
     const ano = Number(req.query.ano) || new Date().getFullYear();
@@ -310,11 +399,6 @@ app.get("/api/visao-geral/series", async (req, res) => {
 });
 
 
-/**
- * ============================================================
- * 3) EVOLUÇÃO DO USO (12 meses)
- * ============================================================
- */
 app.get("/api/visao-geral/evolucao-uso", async (req, res) => {
   try {
     const sql = `
@@ -356,11 +440,6 @@ app.get("/api/visao-geral/evolucao-uso", async (req, res) => {
 });
 
 
-/**
- * ============================================================
- * 4) ECONOMIA MENSAL
- * ============================================================
- */
 app.get("/api/visao-geral/economia", async (req, res) => {
   try {
     const ano = Number(req.query.ano) || new Date().getFullYear();
@@ -383,6 +462,119 @@ app.get("/api/visao-geral/economia", async (req, res) => {
   } catch (err) {
     console.error("Erro /economia:", err);
     res.status(500).json({ error: "Falha ao carregar economia" });
+  }
+});
+
+app.get("/api/visao-geral/cidadaos-resumo", async (req, res) => {
+  try {
+    const sql = `
+      SELECT
+        SUM(CASE WHEN LOWER(gender) IN ('m','masculino') THEN 1 END) AS homens,
+        SUM(CASE WHEN LOWER(gender) IN ('f','feminino') THEN 1 END) AS mulheres,
+        FLOOR(AVG(TIMESTAMPDIFF(YEAR, birthday, CURDATE()))) AS idade_media
+      FROM jp_conectada.citizens
+      WHERE tenant_id = ?
+    `;
+
+    const [[rows]] = await db.query(sql, [TENANT_ID]);
+
+    res.json({
+      homens: rows.homens || 0,
+      mulheres: rows.mulheres || 0,
+      idade_media: rows.idade_media || 0
+    });
+
+  } catch (err) {
+    console.error("Erro /cidadaos-resumo:", err);
+    res.status(500).json({ error: "Falha ao carregar resumo de cidadãos" });
+  }
+});
+
+
+app.get("/api/visao-geral/evolucao-uso", async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `
+      SELECT
+        DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n MONTH), '%Y-%m-01') AS mes_iso,
+        (
+          SELECT COUNT(*)
+          FROM jp_conectada.solicitations s
+          WHERE s.tenant_id = ?
+            AND s.created_at >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n MONTH), '%Y-%m-01')
+            AND s.created_at < DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n-1 MONTH), '%Y-%m-01')
+        ) AS abertas,
+        (
+          SELECT COUNT(*)
+          FROM jp_conectada.solicitations s2
+          WHERE s2.tenant_id = ?
+            AND s2.status = 1
+            AND s2.updated_at >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n MONTH), '%Y-%m-01')
+            AND s2.updated_at < DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n-1 MONTH), '%Y-%m-01')
+        ) AS concluidas
+      FROM (
+        SELECT 11 AS n UNION ALL SELECT 10 UNION ALL SELECT 9 UNION ALL SELECT 8 UNION ALL
+        SELECT 7 UNION ALL SELECT 6 UNION ALL SELECT 5 UNION ALL SELECT 4 UNION ALL
+        SELECT 3 UNION ALL SELECT 2 UNION ALL SELECT 1 UNION ALL SELECT 0
+      ) seq
+      ORDER BY DATE(mes_iso)
+      `,
+      [TENANT_ID, TENANT_ID]
+    );
+
+    res.json(rows);
+
+  } catch (err) {
+    console.error("Erro evolução-uso:", err);
+    res.status(500).json({ error: "Erro ao carregar evolução" });
+  }
+});
+
+
+app.get("/api/visao-geral/contadores", async (req, res) => {
+  try {
+    const sql = `
+      SELECT
+        /* serviços cadastrados */
+        (SELECT COUNT(*) FROM jp_conectada.services s 
+          WHERE s.tenant_id = ? AND s.active = 1) AS total_servicos,
+
+        /* usuários (servidores) ativos */
+        (SELECT COUNT(*) FROM jp_conectada.users u 
+          WHERE u.tenant_id = ? AND u.active = 1) AS total_usuarios,
+
+        /* cidadãos */
+        (SELECT COUNT(*) FROM jp_conectada.citizens c 
+          WHERE c.tenant_id = ? AND c.active = 1) AS total_cidadaos,
+
+        /* setores */
+        (SELECT COUNT(*) FROM jp_conectada.sectors se 
+          WHERE se.tenant_id = ? AND se.active = 1) AS total_setores,
+
+        /* eficiência global */
+        (
+          SELECT 
+            IFNULL((SUM(CASE WHEN s.status = 1 THEN 1 END) / NULLIF(COUNT(*),0)) * 100, 0)
+          FROM jp_conectada.solicitations s
+          WHERE s.tenant_id = ?
+        ) AS eficiencia_pct,
+
+        /* qualidade média (exemplo) */
+        (
+          SELECT IFNULL(AVG(r.score), 0)
+          FROM jp_conectada.ratings r
+          WHERE r.tenant_id = ?
+        ) AS qualidade_media
+    `;
+
+    const params = [TENANT_ID, TENANT_ID, TENANT_ID, TENANT_ID, TENANT_ID, TENANT_ID];
+    const [rows] = await db.query(sql, params);
+
+    res.json(rows[0] || {});
+
+  } catch (err) {
+    console.error("KPIs erro:", err);
+    res.status(500).json({ error: "Falha ao carregar contadores" });
   }
 });
 
@@ -496,44 +688,6 @@ app.get("/api/resumo-periodo", async (req, res) => {
 });
 
 
-/**
- * ============================================================
- * 5) RESUMO DE CIDADÃOS
- * ============================================================
- */
-app.get("/api/visao-geral/cidadaos-resumo", async (req, res) => {
-  try {
-    const sql = `
-      SELECT
-        SUM(CASE WHEN LOWER(gender) IN ('m','masculino') THEN 1 END) AS homens,
-        SUM(CASE WHEN LOWER(gender) IN ('f','feminino') THEN 1 END) AS mulheres,
-        FLOOR(AVG(TIMESTAMPDIFF(YEAR, birthday, CURDATE()))) AS idade_media
-      FROM jp_conectada.citizens
-      WHERE tenant_id = ?
-    `;
-
-    const [[rows]] = await db.query(sql, [TENANT_ID]);
-
-    res.json({
-      homens: rows.homens || 0,
-      mulheres: rows.mulheres || 0,
-      idade_media: rows.idade_media || 0
-    });
-
-  } catch (err) {
-    console.error("Erro /cidadaos-resumo:", err);
-    res.status(500).json({ error: "Falha ao carregar resumo de cidadãos" });
-  }
-});
-/* ============================================================
-   📁 ROTAS — SETORES
-============================================================ */
-
-/**
- * ============================================================
- * 1) LISTA COMPLETA DE SETORES — /api/setores
- * ============================================================
- */
 app.get("/api/setores", async (req, res) => {
   try {
     const [rows] = await db.query(`
@@ -635,11 +789,6 @@ app.get("/api/setores", async (req, res) => {
 });
 
 
-/**
- * ============================================================
- * 2) RESUMO DE USUÁRIOS POR SETOR (TOP 10) — /api/setores-usuarios-resumo
- * ============================================================
- */
 app.get("/api/setores-usuarios-resumo", async (req, res) => {
   try {
     const sql = `
@@ -667,11 +816,6 @@ app.get("/api/setores-usuarios-resumo", async (req, res) => {
 });
 
 
-/**
- * ============================================================
- * 3) USUÁRIOS DE UM SETOR — /api/setores/:id/usuarios
- * ============================================================
- */
 app.get("/api/setores/:id/usuarios", async (req, res) => {
   try {
     const setorId = Number(req.params.id);
@@ -697,19 +841,6 @@ app.get("/api/setores/:id/usuarios", async (req, res) => {
     res.status(500).json({ error: "Erro ao buscar usuários do setor" });
   }
 });
-
-
-/**
- * ============================================================
- * 4) EFICIÊNCIA POR SETOR — /api/setores-eficiencia
- * ============================================================
- */
-
-/**
- * ============================================================
- * 5) QUALIDADE POR SETOR — /api/setores-qualidade
- * ============================================================
- */
 
 app.get("/api/setores-eficiencia", async (req, res) => {
   try {
@@ -814,11 +945,6 @@ app.get("/api/setores-qualidade", async (req, res) => {
   }
 });
 
-/**
- * ============================================================
- * 6) CONSOLIDADO SETORES — /api/setores-consolidado
- * ============================================================
- */
 app.get("/api/setores-consolidado", async (req, res) => {
   try {
     const sql = `
@@ -847,21 +973,7 @@ app.get("/api/setores-consolidado", async (req, res) => {
     res.status(500).json({ error: "Erro ao carregar consolidado" });
   }
 });
-/* ============================================================
-   👤 ROTAS — USUÁRIOS (SERVIDORES)
-============================================================ */
 
-
-/**
- * ============================================================
- * 1) KPIs — /api/usuarios/kpis
- * ============================================================
- * total_servidores
- * despacharam_24h
- * sem_despachar_30d
- * criados_30d
- * ============================================================
- */
 
 app.get("/api/usuarios/lista", async (req, res) => {
   try {
@@ -984,15 +1096,6 @@ app.get("/api/usuarios/kpis", async (req, res) => {
   }
 });
 
-
-
-/**
- * ============================================================
- * 2) LOGIN DISTRIBUIÇÃO — /api/usuarios/login-distribuicao
- * ============================================================
- * Para o mini gráfico 1.
- * ============================================================
- */
 app.get("/api/usuarios/login-distribuicao", async (req, res) => {
   try {
     const [[r]] = await db.query(
@@ -1028,15 +1131,6 @@ app.get("/api/usuarios/login-distribuicao", async (req, res) => {
   }
 });
 
-
-
-/**
- * ============================================================
- * 3) RANKING — /api/usuarios/ranking
- * ============================================================
- * Mini gráfico 2 — quem mais despachou no período.
- * ============================================================
- */
 app.get("/api/usuarios/ranking", async (req, res) => {
   try {
     const { inicio, fim } = req.query;
@@ -1065,123 +1159,6 @@ app.get("/api/usuarios/ranking", async (req, res) => {
   }
 });
 
-
-
-/**
- * ============================================================
- * 4) LISTA DETALHADA — /api/usuarios/detalhes
- * ============================================================
- * Inclui:
- * - setores (pai + secundários)
- * - telefone, email
- * - último despacho
- * - dias sem despachar
- * - total de despachos no período
- * ============================================================
- */
-// app.get("/api/usuarios/detalhes", async (req, res) => {
-//   try {
-//     const { inicio, fim } = req.query;
-
-//     const inicio_full = `${inicio} 00:00:00`;
-//     const fim_full = `${fim} 23:59:59`;
-
-//     const sql = `
-//     WITH usuario_setores AS (
-//         SELECT 
-//             su.user_id,
-//             GROUP_CONCAT(s.title ORDER BY s.title SEPARATOR ', ') AS setores
-//         FROM jp_conectada.sector_user su
-//         JOIN jp_conectada.sectors s ON s.id = su.sector_id
-//         WHERE su.active = 1
-//         GROUP BY su.user_id
-//     ),
-
-//     ultimos_despachos AS (
-//         SELECT 
-//             t.origem_user AS nome_usuario,
-//             MAX(t.created_at) AS ultimo_despacho
-//         FROM jp_conectada.tramitations t
-//         JOIN jp_conectada.solicitations s ON s.id = t.solicitation_id
-//         WHERE s.tenant_id = ?
-//         GROUP BY t.origem_user
-//     ),
-
-//     despachos_periodo AS (
-//         SELECT
-//             t.origem_user AS nome_usuario,
-//             COUNT(*) AS total_despachos_periodo
-//         FROM jp_conectada.tramitations t
-//         JOIN jp_conectada.solicitations s ON s.id = t.solicitation_id
-//         WHERE s.tenant_id = ?
-//           AND t.created_at BETWEEN ? AND ?
-//         GROUP BY t.origem_user
-//     )
-
-//     SELECT
-//         u.id,
-//         CONCAT(u.first_name, ' ', u.last_name) AS nome,
-//         u.email,
-//         u.phone,
-
-//         us.setores AS setores,
-
-//         u.created_at AS data_cadastro,
-
-//         ud.ultimo_despacho,
-
-//         CASE 
-//             WHEN ud.ultimo_despacho IS NULL THEN NULL
-//             ELSE DATEDIFF(CURDATE(), DATE(ud.ultimo_despacho))
-//         END AS dias_sem_despacho,
-
-//         COALESCE(dp.total_despachos_periodo, 0) AS despachos_periodo
-
-//     FROM jp_conectada.users u
-
-//     LEFT JOIN usuario_setores us 
-//            ON us.user_id = u.id
-
-//     LEFT JOIN ultimos_despachos ud 
-//            ON ud.nome_usuario = CONCAT(u.first_name, ' ', u.last_name)
-
-//     LEFT JOIN despachos_periodo dp
-//            ON dp.nome_usuario = CONCAT(u.first_name, ' ', u.last_name)
-
-//     WHERE 
-//         u.tenant_id = ?
-//         AND u.active = 1
-//         AND u.email NOT LIKE '%@cubotecnologiabr.com.br%'
-
-//     GROUP BY
-//         u.id,
-//         nome,
-//         us.setores,
-//         u.email,
-//         u.phone,
-//         u.created_at,
-//         ud.ultimo_despacho,
-//         dp.total_despachos_periodo
-
-//     ORDER BY 
-//         ud.ultimo_despacho DESC;
-//     `;
-
-//     const [rows] = await db.query(sql, [
-//       TENANT_ID,
-//       TENANT_ID,
-//       inicio_full,
-//       fim_full,
-//       TENANT_ID
-//     ]);
-
-//     res.json(rows);
-
-//   } catch (err) {
-//     console.error("Erro /usuarios/detalhes:", err);
-//     res.status(500).json({ error: true });
-//   }
-// });
 
 app.get("/api/usuarios/detalhes", async (req, res) => {
   try {
@@ -1286,24 +1263,6 @@ ORDER BY ud.ultimo_despacho DESC
 });
 
 
-/* ============================================================
-   📄 ROTAS — SOLICITAÇÕES (REQUISIÇÕES)
-============================================================ */
-
-
-/**
- * ============================================================
- * 1) RESUMO POR STATUS — /api/solicitacoes/resumo
- * ============================================================
- * Retorna:
- * - total
- * - iniciadas (0)
- * - espera (2)
- * - respondidas (3)
- * - concluidas (1)
- * Com filtros por período, setor e serviço.
- * ============================================================
- */
 app.get("/api/solicitacoes/resumo", async (req, res) => {
   try {
     let { inicio, fim, setor, servico } = req.query;
@@ -1357,15 +1316,6 @@ app.get("/api/solicitacoes/resumo", async (req, res) => {
   }
 });
 
-
-
-/**
- * ============================================================
- * 2) LISTA DE SOLICITAÇÕES — /api/solicitacoes/lista
- * ============================================================
- * Tabela completa com filtros.
- * ============================================================
- */
 app.get("/api/solicitacoes/lista", async (req, res) => {
   try {
     let { inicio, fim, setor, servico } = req.query;
@@ -1425,12 +1375,52 @@ app.get("/api/solicitacoes/lista", async (req, res) => {
 });
 
 
+app.get("/api/solicitacoes/bairros-top6", async (req, res) => {
+  try {
+    const ano = req.query.ano || new Date().getFullYear();
 
-/**
- * ============================================================
- * 3) TOP 5 SERVIÇOS — /api/indicadores-periodo/servicos
- * ============================================================
- */
+    const [top] = await db.query(
+      `
+      SELECT neighborhood AS bairro, COUNT(*) AS total
+      FROM jp_conectada.solicitations
+      WHERE tenant_id = ?
+        AND neighborhood IS NOT NULL
+        AND YEAR(created_at) = ?
+      GROUP BY bairro
+      ORDER BY total DESC
+      LIMIT 6
+      `,
+      [TENANT_ID, ano]
+    );
+
+    if (top.length === 0) return res.json([]);
+
+    const bairros = top.map(b => b.bairro);
+
+    const [evolucao] = await db.query(
+      `
+      SELECT neighborhood AS bairro,
+             MONTH(created_at) AS mes,
+             COUNT(*) AS total
+      FROM jp_conectada.solicitations
+      WHERE tenant_id = ?
+        AND neighborhood IN (?)
+        AND YEAR(created_at) = ?
+      GROUP BY bairro, mes
+      ORDER BY mes ASC
+      `,
+      [TENANT_ID, bairros, ano]
+    );
+
+    res.json({ bairros: top, meses: evolucao });
+
+  } catch (err) {
+    console.error("Erro bairros top6:", err);
+    res.status(500).json({ error: "Erro ao buscar bairros" });
+  }
+});
+
+
 app.get("/api/indicadores-periodo/servicos", async (req, res) => {
   try {
     const period = req.query.period || "30d";
@@ -1462,13 +1452,6 @@ app.get("/api/indicadores-periodo/servicos", async (req, res) => {
   }
 });
 
-
-
-/**
- * ============================================================
- * 4) TOP 5 SETORES — /api/indicadores-periodo/setores
- * ============================================================
- */
 app.get("/api/indicadores-periodo/setores", async (req, res) => {
   try {
     const period = req.query.period || "30d";
@@ -1503,17 +1486,6 @@ app.get("/api/indicadores-periodo/setores", async (req, res) => {
 });
 
 
-
-/**
- * ============================================================
- * 5) TAXA DE RESOLUÇÃO — /api/indicadores/taxa-resolucao
- * ============================================================
- * TOTAL iniciadas
- * TOTAL respondidas
- * TOTAL concluídas
- * tempo médio de conclusão
- * ============================================================
- */
 app.get("/api/indicadores/taxa-resolucao", async (req, res) => {
   try {
     const periodo = req.query.periodo || "30d";
@@ -1598,348 +1570,7 @@ app.get("/api/indicadores/taxa-resolucao", async (req, res) => {
 
 
 
-/**
- * ============================================================
- * 6) EVOLUÇÃO 12 MESES — /api/visao-geral/evolucao-uso
- * ============================================================
- */
-app.get("/api/visao-geral/evolucao-uso", async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      `
-      SELECT
-        DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n MONTH), '%Y-%m-01') AS mes_iso,
-        (
-          SELECT COUNT(*)
-          FROM jp_conectada.solicitations s
-          WHERE s.tenant_id = ?
-            AND s.created_at >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n MONTH), '%Y-%m-01')
-            AND s.created_at < DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n-1 MONTH), '%Y-%m-01')
-        ) AS abertas,
-        (
-          SELECT COUNT(*)
-          FROM jp_conectada.solicitations s2
-          WHERE s2.tenant_id = ?
-            AND s2.status = 1
-            AND s2.updated_at >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n MONTH), '%Y-%m-01')
-            AND s2.updated_at < DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL seq.n-1 MONTH), '%Y-%m-01')
-        ) AS concluidas
-      FROM (
-        SELECT 11 AS n UNION ALL SELECT 10 UNION ALL SELECT 9 UNION ALL SELECT 8 UNION ALL
-        SELECT 7 UNION ALL SELECT 6 UNION ALL SELECT 5 UNION ALL SELECT 4 UNION ALL
-        SELECT 3 UNION ALL SELECT 2 UNION ALL SELECT 1 UNION ALL SELECT 0
-      ) seq
-      ORDER BY DATE(mes_iso)
-      `,
-      [TENANT_ID, TENANT_ID]
-    );
 
-    res.json(rows);
-
-  } catch (err) {
-    console.error("Erro evolução-uso:", err);
-    res.status(500).json({ error: "Erro ao carregar evolução" });
-  }
-});
-
-
-
-/**
- * ============================================================
- * 7) TOP 6 BAIRROS — /api/solicitacoes/bairros-top6
- * ============================================================
- */
-app.get("/api/solicitacoes/bairros-top6", async (req, res) => {
-  try {
-    const ano = req.query.ano || new Date().getFullYear();
-
-    const [top] = await db.query(
-      `
-      SELECT neighborhood AS bairro, COUNT(*) AS total
-      FROM jp_conectada.solicitations
-      WHERE tenant_id = ?
-        AND neighborhood IS NOT NULL
-        AND YEAR(created_at) = ?
-      GROUP BY bairro
-      ORDER BY total DESC
-      LIMIT 6
-      `,
-      [TENANT_ID, ano]
-    );
-
-    if (top.length === 0) return res.json([]);
-
-    const bairros = top.map(b => b.bairro);
-
-    const [evolucao] = await db.query(
-      `
-      SELECT neighborhood AS bairro,
-             MONTH(created_at) AS mes,
-             COUNT(*) AS total
-      FROM jp_conectada.solicitations
-      WHERE tenant_id = ?
-        AND neighborhood IN (?)
-        AND YEAR(created_at) = ?
-      GROUP BY bairro, mes
-      ORDER BY mes ASC
-      `,
-      [TENANT_ID, bairros, ano]
-    );
-
-    res.json({ bairros: top, meses: evolucao });
-
-  } catch (err) {
-    console.error("Erro bairros top6:", err);
-    res.status(500).json({ error: "Erro ao buscar bairros" });
-  }
-});
-/* ============================================================
-   📊 ROTAS — VISÃO GERAL (KPIs, SÉRIES E ECONOMIA)
-============================================================ */
-
-
-/**
- * ============================================================
- * 1) CONTADORES PRINCIPAIS — /api/visao-geral/contadores
- * ============================================================
- * Serviços | Usuários | Cidadãos | Setores | Eficiência | Qualidade
- * Usado no topo da visão geral.
- * ============================================================
- */
-app.get("/api/visao-geral/contadores", async (req, res) => {
-  try {
-    const sql = `
-      SELECT
-        /* serviços cadastrados */
-        (SELECT COUNT(*) FROM jp_conectada.services s 
-          WHERE s.tenant_id = ? AND s.active = 1) AS total_servicos,
-
-        /* usuários (servidores) ativos */
-        (SELECT COUNT(*) FROM jp_conectada.users u 
-          WHERE u.tenant_id = ? AND u.active = 1) AS total_usuarios,
-
-        /* cidadãos */
-        (SELECT COUNT(*) FROM jp_conectada.citizens c 
-          WHERE c.tenant_id = ? AND c.active = 1) AS total_cidadaos,
-
-        /* setores */
-        (SELECT COUNT(*) FROM jp_conectada.sectors se 
-          WHERE se.tenant_id = ? AND se.active = 1) AS total_setores,
-
-        /* eficiência global */
-        (
-          SELECT 
-            IFNULL((SUM(CASE WHEN s.status = 1 THEN 1 END) / NULLIF(COUNT(*),0)) * 100, 0)
-          FROM jp_conectada.solicitations s
-          WHERE s.tenant_id = ?
-        ) AS eficiencia_pct,
-
-        /* qualidade média (exemplo) */
-        (
-          SELECT IFNULL(AVG(r.score), 0)
-          FROM jp_conectada.ratings r
-          WHERE r.tenant_id = ?
-        ) AS qualidade_media
-    `;
-
-    const params = [TENANT_ID, TENANT_ID, TENANT_ID, TENANT_ID, TENANT_ID, TENANT_ID];
-    const [rows] = await db.query(sql, params);
-
-    res.json(rows[0] || {});
-
-  } catch (err) {
-    console.error("KPIs erro:", err);
-    res.status(500).json({ error: "Falha ao carregar contadores" });
-  }
-});
-
-
-
-/**
- * ============================================================
- * 2) KPIs VISÃO GERAL — /api/visao-geral
- * ============================================================
- * KPIs grandes:
- * - totais
- * - eficiência
- * - engajamento
- * - qualidade média
- * - economia
- * ============================================================
- */
-// app.get("/api/visao-geral", async (req, res) => {
-//   try {
-//     const tenantId = TENANT_ID;
-
-//     /* ---------------------- SERVIÇOS ---------------------- */
-//     const [[serv]] = await db.query(
-//       `SELECT COUNT(*) AS total FROM jp_conectada.services WHERE tenant_id = ? AND active = 1`,
-//       [tenantId]
-//     );
-
-//     /* ---------------------- SETORES ----------------------- */
-//     const [[secs]] = await db.query(
-//       `SELECT COUNT(*) AS total FROM jp_conectada.sectors WHERE tenant_id = ? AND active = 1`,
-//       [tenantId]
-//     );
-
-//     /* ---------------------- USUÁRIOS ---------------------- */
-//     const [[users]] = await db.query(
-//       `
-//       SELECT COUNT(DISTINCT u.id) AS total
-//       FROM jp_conectada.users u
-//       LEFT JOIN jp_conectada.sector_user su ON su.user_id = u.id
-//       WHERE u.tenant_id = ? AND u.active = 1
-//       `,
-//       [tenantId]
-//     );
-
-//     /* ---------------------- CIDADÃOS ---------------------- */
-//     let totalCid = 0;
-//     try {
-//       const [[cid]] = await db.query(
-//         `SELECT COUNT(*) AS total FROM jp_conectada.citizens WHERE tenant_id = ?`,
-//         [tenantId]
-//       );
-//       totalCid = cid.total;
-//     } catch {
-//       totalCid = 0;
-//     }
-
-//     /* ---------------------- EFICIÊNCIA ---------------------- */
-//     const [[ef]] = await db.query(
-//       `
-//       SELECT
-//         COUNT(*) AS total,
-//         SUM(CASE WHEN s.status = 1 THEN 1 END) AS concluidas,
-//         SUM(CASE WHEN s.status = 2 THEN 1 END) AS respondidas
-//       FROM jp_conectada.solicitations s
-//       WHERE s.tenant_id = ?
-//       `,
-//       [tenantId]
-//     );
-
-//     const totalSol = ef.total || 0;
-//     const concluidas = ef.concluidas || 0;
-//     const respondidas = ef.respondidas || 0;
-
-//     const eficienciaPct = totalSol > 0 ? (concluidas / totalSol) * 100 : 0;
-
-//     const abertasNaoConcl = Math.max(totalSol - concluidas, 0);
-//     let respondidasNaoConcl = Math.max(respondidas - concluidas, 0);
-
-//     const engajamentoPct = abertasNaoConcl > 0
-//       ? (respondidasNaoConcl / abertasNaoConcl) * 100
-//       : 0;
-
-//     /* ---------------------- QUALIDADE ---------------------- */
-//     let qualidadeMedia = 0, totalAvaliacoes = 0;
-
-//     try {
-//       const [[qual]] = await db.query(
-//         `
-//         SELECT AVG(av.score) AS nota_media, COUNT(*) AS total
-//         FROM jp_conectada.service_evaluations av
-//         JOIN jp_conectada.solicitations s ON s.id = av.solicitation_id
-//         WHERE s.tenant_id = ?
-//         `,
-//         [tenantId]
-//       );
-
-//       qualidadeMedia = qual.nota_media || 0;
-//       totalAvaliacoes = qual.total || 0;
-
-//     } catch (err) {
-//       qualidadeMedia = 0;
-//       totalAvaliacoes = 0;
-//     }
-
-//     /* ---------------------- ECONOMIA ---------------------- */
-//     const P_PAGINAS = 4;
-//     const C_PAGINA = 0.35;
-//     const C_MANUSEIO = 0.80;
-
-//     const economiaRS = totalSol * (P_PAGINAS * C_PAGINA + C_MANUSEIO);
-
-//     res.json({
-//       totais: {
-//         servicos: serv.total,
-//         setores: secs.total,
-//         usuarios: users.total,
-//         cidadaos: totalCid
-//       },
-//       desempenho: {
-//         eficiencia_pct: Number(eficienciaPct.toFixed(1)),
-//         engajamento_pct: Number(engajamentoPct.toFixed(1)),
-//         qualidade_media: Number(qualidadeMedia.toFixed(2)),
-//         total_avaliacoes: totalAvaliacoes
-//       },
-//       economia: {
-//         estimada_rs: Number(economiaRS.toFixed(2)),
-//         parametros: { P_PAGINAS, C_PAGINA, C_MANUSEIO }
-//       }
-//     });
-
-//   } catch (e) {
-//     console.error(e);
-//     res.status(500).json({ error: "Erro ao carregar visão geral" });
-//   }
-// });
-
-
-
-/**
- * ============================================================
- * 3) SÉRIE MENSAL — /api/visao-geral/series
- * ============================================================
- * Gráfico que aparece abaixo dos KPIs da visão geral.
- * ============================================================
- */
-// app.get("/api/visao-geral/series", async (req, res) => {
-//   try {
-//     const ano = Number(req.query.ano) || new Date().getFullYear();
-
-//     const [serie] = await db.query(
-//       `
-//       SELECT
-//           MONTH(s.created_at) AS mes,
-//           COUNT(*) AS geradas,
-//           SUM(CASE WHEN s.status = 1 THEN 1 END) AS concluidas
-//       FROM jp_conectada.solicitations s
-//       WHERE s.tenant_id = ?
-//         AND YEAR(s.created_at) = ?
-//       GROUP BY MONTH(s.created_at)
-//       ORDER BY mes
-//       `,
-//       [TENANT_ID, ano]
-//     );
-
-//     const [logins] = await db.query(
-//       `
-//       SELECT MONTH(last_login_at) AS mes, COUNT(*) AS total
-//       FROM jp_conectada.users
-//       WHERE tenant_id = ?
-//         AND YEAR(last_login_at) = ?
-//       GROUP BY mes
-//       `,
-//       [TENANT_ID, ano]
-//     );
-
-//     res.json({ ano, solicitacoes: serie, logins });
-
-//   } catch (err) {
-//     console.error("Erro visao-geral/series:", err);
-//     res.status(500).json({ error: "Erro ao carregar séries" });
-//   }
-// });
-
-
-
-/**
- * ============================================================
- * 4) ECONOMÔMETRO — /api/economometro
- * ============================================================
- */
 app.get("/api/economometro", async (req, res) => {
   try {
     const periodo = req.query.periodo || "ano";
@@ -2003,17 +1634,7 @@ app.get("/api/economometro", async (req, res) => {
     res.status(500).json({ error: "Erro ao gerar economômetro" });
   }
 });
-/* ============================================================
-   🧩 ROTAS AUXILIARES — DETALHES DE SETOR
-============================================================ */
 
-
-/**
- * ============================================================
- * SERVIÇOS MAIS SOLICITADOS POR SETOR
- * /api/setor/:id/servicos
- * ============================================================
- */
 app.get("/api/setor/:id/servicos", async (req, res) => {
   try {
     const setorId = req.params.id;
@@ -2044,14 +1665,6 @@ app.get("/api/setor/:id/servicos", async (req, res) => {
   }
 });
 
-
-
-/**
- * ============================================================
- * EVOLUÇÃO MENSAL DO SETOR
- * /api/setor/:id/evolucao
- * ============================================================
- */
 app.get("/api/setor/:id/evolucao", async (req, res) => {
   try {
     const setorId = req.params.id;
@@ -2091,14 +1704,6 @@ app.get("/api/setor/:id/evolucao", async (req, res) => {
   }
 });
 
-
-
-/**
- * ============================================================
- * DISTRIBUIÇÃO POR STATUS DO SETOR
- * /api/setor/:id/status
- * ============================================================
- */
 app.get("/api/setor/:id/status", async (req, res) => {
   try {
     const setorId = req.params.id;
