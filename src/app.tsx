@@ -3,14 +3,12 @@ import Visaogeral from "./pages/Visaogeral";
 import Setores from "./pages/Setores";
 import Usuarios from "./pages/Usuarios";
 
-export function resolveApiBase(){
-  const loc = window.location as Location;
-  const origin = (loc as any).origin || `${loc.protocol}//${loc.host}`;
-  if (origin.includes(":3000")) return `${origin}/api`;
-  return `${loc.protocol}//${loc.hostname}:3000/api`;
-}
+export const API_BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  (window.location.host.includes("localhost")
+    ? "http://localhost:3000/api"
+    : "https://dash-backend-vhh1.onrender.com/api");
 
-export const API_BASE_URL = resolveApiBase();
 
 export default function App(){
   return (
