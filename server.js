@@ -7,37 +7,43 @@ require("dotenv").config();
 
 const app = express();
 const TENANT_ID = 1;
+onst isDev = process.env.NODE_ENV !== "production";
 
-app.use(express.json());
-app.set("trust proxy", 1);
+const allowedOrigins = [
+  "https://dash-lovat-alpha.vercel.app",
+  "https://dash-backend-vhh1.onrender.com",
+  "http://localhost:3000",
+  ...(process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(",").map(s => s.trim())
+    : [])
+];
 
 app.use(
   cors({
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    origin: (origin, callback) => {
+      if (isDev) return callback(null, true);
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error("CORS Blocked: " + origin));
+    },
+    credentials: true,
+    exposedHeaders: ["Content-Length", "Content-Type"]
   })
 );
 
-  app.use(helmet());
-app.use(
-  rateLimit({
-    windowMs: 60 * 1000,
-    max: 300,
-  })
-);const logger = {
-  info: (msg, meta) =>
-    console.log(JSON.stringify({ level: "info", msg, ...meta })),
-  error: (msg, meta) =>
-    console.error(JSON.stringify({ level: "error", msg, ...meta })),
-};
-/* ============================================================
-   📦 LOGGER
-============================================================ */
+/* NECESSÁRIO para CORS pré-flight (OPTIONS) */
+app.options("*", cors());
 
-/* ============================================================
-   🗄️ MYSQL — POOL ÚNICO
-============================================================ */
+/* Segurança */
+app.use(helmet());
+app.use(express.json());
+app.set("trust proxy", 1);
+app.use(rateLimit({ windowMs: 60 * 1000, max: 300 }));
+
+/* -------------------------------------------------------
+   🗄 MYSQL
+------------------------------------------------------- */
+
 const db = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -45,6 +51,14 @@ const db = mysql.createPool({
   database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10
+});
+
+
+/* -------------------------------------------------------
+   🔥 ROTA DE TESTE (AGORA EXISTE)
+------------------------------------------------------- */
+app.get("/", (req, res) => {
+  res.json({ status: "OK", message: "API funcionando 🚀" });
 });
 
 /* ============================================================
@@ -1728,30 +1742,25 @@ app.get("/api/setor/:id/status", async (req, res) => {
   }
 });
 
-
-/* ============================================================
-   ❌ 404 Handler
-============================================================ */
+/* -------------------------------------------------------
+   404
+------------------------------------------------------- */
 app.use((req, res) => {
-  logger.error("rota não encontrada", { path: req.originalUrl });
   res.status(404).json({ error: "Rota não encontrada" });
 });
 
-/* ============================================================
-   🚨 Error Handler Global
-============================================================ */
+/* -------------------------------------------------------
+   GLOBAL ERROR HANDLER
+------------------------------------------------------- */
 app.use((err, req, res, next) => {
-  logger.error("erro interno", { err });
-  res.status(500).json({ error: "Erro interno no servidor" });
+  console.error("Erro:", err);
+  res.status(500).json({ error: "Erro interno" });
 });
 
-/* ============================================================
-   🚀 START SERVER
-============================================================ */
+/* -------------------------------------------------------
+   START
+------------------------------------------------------- */
 const PORT = process.env.PORT || 3000;
-
 app.listen(PORT, "0.0.0.0", () => {
-  logger.info(`🚀 Servidor rodando na porta ${PORT}`, {
-    env: process.env.NODE_ENV || "development",
-  });
+  console.log(`🚀 Servidor rodando na porta ${PORT} — modo ${isDev ? "DEV" : "PROD"}`);
 });
