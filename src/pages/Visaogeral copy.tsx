@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Header from "../components/Header";
-//import SectionTitle from "../components/SectionTitle";
-// removed conflicting import – local SectionTitle component is used below
+// import SectionTitle from "../components/SectionTitle"; // não usar o global aqui
 import { API_BASE_URL } from "../app";
 import Chart from "chart.js/auto";
+import TitleWithTooltip from "../components/TitleWithTooltip";
 
 /* ============================================================
    UTIL: contador animado para KPIs
@@ -37,6 +37,76 @@ function useCountUp(value: number | undefined, duration = 800) {
   return display;
 }
 
+export function formatarTempo(minutosTotais: number | null | undefined): string {
+  if (!minutosTotais || minutosTotais < 1) return "0 minutos";
+
+  const dias = Math.floor(minutosTotais / 1440);     // 1440 = 24 * 60
+  const horas = Math.floor((minutosTotais % 1440) / 60);
+  const minutos = Math.floor(minutosTotais % 60);
+
+  // --- Caso: só minutos (< 60)
+  if (minutosTotais < 60) {
+    return `${minutosTotais} minuto${minutosTotais === 1 ? "" : "s"}`;
+  }
+
+  // --- Caso: menos de 1 dia (horas + minutos)
+  if (dias === 0) {
+    if (minutos === 0)
+      return `${horas}h`;
+    return `${horas}h e ${minutos} minuto${minutos === 1 ? "" : "s"}`;
+  }
+
+  // --- Caso: dias + horas (minutos não aparecem)
+  return `${dias} dia${dias > 1 ? "s" : ""} e ${horas}h`;
+}
+
+
+type Periodo = 
+  | "today" 
+  | "7d" 
+  | "30d" 
+  | "90d" 
+  | "6m" 
+  | "1y" 
+  | "all"
+  | "ano_passado";
+
+
+
+
+/* ============================================================
+   REGRAS DE COR DOS CARDS
+============================================================ */
+function getMediaClass(media: number) {
+  // Média diária: azul por padrão, vermelho se passar de 25
+  if (media > 25) return "card-red";
+  return "card-blue";
+}
+
+function getTaxaClass(taxa: number) {
+  // Taxa de resolução: >=70 verde, 45–69 laranja, <45 vermelho
+  if (taxa >= 70) return "card-green";
+  if (taxa >= 45) return "card-orange";
+  return "card-red";
+}
+
+function getTaxaRespostaClass(p: number) {
+  // Mesma lógica da taxa de resolução
+  if (p >= 70) return "card-green";
+  if (p >= 45) return "card-orange";
+  return "card-red";
+}
+
+function getTempoClass(dias: number) {
+  // Tempo médio: <=15 verde, 16–45 laranja, >45 vermelho
+  if (dias <= 15) return "card-green";
+  if (dias <= 45) return "card-orange";
+  return "card-red";
+}
+
+
+
+
 /* ============================================================
    TIPAGENS
 ============================================================ */
@@ -56,10 +126,8 @@ type EconomometroData = {
   dinheiro: string;
 };
 
-type Periodo = "today" | "7d" | "30d" | "90d" | "6m" | "1y" | "all";
-
 /* ============================================================
-   COMPONENTE DE TÍTULO PADRÃO
+   COMPONENTE DE TÍTULO PADRÃO (usa o CSS .section-title*)
 ============================================================ */
 type SectionTitleProps = {
   title: string;
@@ -69,36 +137,17 @@ type SectionTitleProps = {
 
 const SectionTitle = ({ title, subtitle, infoTooltip }: SectionTitleProps) => {
   return (
-    <header style={{ textAlign: "center", marginBottom: 16 }}>
-      <h2
-        style={{
-          margin: 0,
-          fontSize: "1.05rem",
-          fontWeight: 600,
-          color: "#111827",
-        }}
-      >
+    <header className="section-title">
+      <h2 className="section-title-main">
         {title}
         {infoTooltip && (
-          <span
-            title={infoTooltip}
-            style={{ fontSize: 12, marginLeft: 6, cursor: "help" }}
-          >
+          <span className="section-title-info" title={infoTooltip}>
             ℹ️
           </span>
         )}
       </h2>
-      {subtitle && (
-        <p
-          style={{
-            margin: "4px 0 0",
-            color: "#6b7280",
-            fontSize: 12,
-          }}
-        >
-          {subtitle}
-        </p>
-      )}
+
+      {subtitle && <p className="section-title-sub">{subtitle}</p>}
     </header>
   );
 };
@@ -134,8 +183,8 @@ export default function Visaogeral() {
   const miniSectorsRef = useRef<HTMLCanvasElement | null>(null);
   const miniSectorsChartRef = useRef<Chart | null>(null);
 
-  const miniResolutionRef = useRef<HTMLCanvasElement | null>(null);
-  const miniResolutionChartRef = useRef<Chart | null>(null);
+  const stackedStatusRef = useRef<HTMLCanvasElement | null>(null);
+  const stackedStatusChartRef = useRef<Chart | null>(null);
 
   /** ----------------- ESTADOS GERAIS ----------------- */
   const [anos, setAnos] = useState<number[]>([]);
@@ -151,9 +200,21 @@ export default function Visaogeral() {
 
   const [periodoIndicadores, setPeriodoIndicadores] =
     useState<Periodo>("7d");
-  const [taxaResolucaoMedia, setTaxaResolucaoMedia] = useState<number | null>(
-    null
-  );
+
+const [taxaResolucaoCaixa, setTaxaResolucaoCaixa] = useState<{
+  iniciadas: number;
+  resolvidas: number;
+  respondidas: number;
+  taxa_respostas: number;
+  taxa_resolucao: number;
+  tempo_medio_conclusao_min: number;
+} | null>(null);
+
+ 
+  const [indicadoresExtra, setIndicadoresExtra] = useState({
+    mediaPorDia: 0,
+     diasPeriodo: 0, // <-- NECESS  ÁRIO
+  });
 
   /** ----------------- KPIs (contadores globais) ----------------- */
   const [kpis, setKpis] = useState<{
@@ -164,36 +225,27 @@ export default function Visaogeral() {
     eficiencia_pct?: number;
     qualidade_media?: number;
   }>({});
+
   const countServicos = useCountUp(kpis.total_servicos);
   const countUsuarios = useCountUp(kpis.total_usuarios);
   const countCidadaos = useCountUp(kpis.total_cidadaos);
   const countSetores = useCountUp(kpis.total_setores);
 
-  const [cidadaosResumo, setCidadaosResumo] = useState<{
-    homens?: number;
-    mulheres?: number;
-    idade_media?: number;
-  }>({});
-
+  /** ----------------- ANOS DISPONÍVEIS ----------------- */
   useEffect(() => {
     const y = new Date().getFullYear();
     setAnos([y, y - 1, y - 2, y - 3, y - 4]);
   }, []);
 
-  /** ----------------- CARREGAR CONTADORES & CIDADAOS ----------------- */
+  /** ----------------- CARREGAR CONTADORES ----------------- */
   useEffect(() => {
     async function carregarContadores() {
       const r = await fetch(`${API_BASE_URL}/visao-geral/contadores`);
       const k = await r.json();
       setKpis(k || {});
     }
-    async function carregarCidadaos() {
-      const r = await fetch(`${API_BASE_URL}/visao-geral/cidadaos-resumo`);
-      const c = await r.json();
-      setCidadaosResumo(c || {});
-    }
+
     carregarContadores();
-    carregarCidadaos();
   }, []);
 
   /** ----------------- GRÁFICO: EVOLUÇÃO DE USO ----------------- */
@@ -255,73 +307,76 @@ export default function Visaogeral() {
         },
       });
     }
+
     evolucao();
     return () => {
       if (evolucaoChartRef.current) evolucaoChartRef.current.destroy();
     };
   }, []);
 
-  /** ----------------- GRÁFICO: PERFIL (SERVIDORES x CIDADÃOS x REPRESENTANTES) ----------------- */
-  useEffect(() => {
-    async function perfis() {
-      const r = await fetch(`${API_BASE_URL}/visao-geral/contadores`);
-      const k = await r.json();
-      if (!perfilRef.current) return;
+  // /** ----------------- GRÁFICO: PERFIL (SERVIDORES x CIDADÃOS x REPRESENTANTES) ----------------- */
+  // useEffect(() => {
+  //   async function perfis() {
+  //     const r = await fetch(`${API_BASE_URL}/visao-geral/contadores`);
+  //     const k = await r.json();
+  //     if (!perfilRef.current) return;
 
-      const servidores = Number(k.total_usuarios || 0);
-      const cidadaos = Number(k.total_cidadaos || 0);
-      const representantes = 45000; // mock temporário
+  //     const servidores = Number(k.total_usuarios || 0);
+  //     const cidadaos = Number(k.total_cidadaos || 0);
+  //     const representantes = 45000; // mock temporário
 
-      const raw = [servidores, cidadaos, representantes];
-      const display = raw.map((v) => Math.sqrt(Math.max(1, v)));
+  //     const raw = [servidores, cidadaos, representantes];
+  //     const display = raw.map((v) => Math.sqrt(Math.max(1, v)));
 
-      if (perfilChartRef.current) perfilChartRef.current.destroy();
+  //     if (perfilChartRef.current) perfilChartRef.current.destroy();
 
-      perfilChartRef.current = new Chart(perfilRef.current, {
-        type: "doughnut",
-        data: {
-          labels: ["Servidores", "Cidadãos", "Representantes"],
-          datasets: [
-            {
-              data: display,
-              backgroundColor: ["#2563eb", "#60a5fa", "#93c5fd"],
-              borderColor: "#ffffff",
-              borderWidth: 2,
-              offset: display.map((_, i) => (i === 0 ? 8 : 0)),
-              hoverOffset: 10,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          cutout: "45%",
-          plugins: {
-            legend: { position: "bottom" },
-            tooltip: {
-              callbacks: {
-                label: (ctx: any) => {
-                  const idx = ctx.dataIndex ?? 0;
-                  const val = raw[idx] ?? 0;
-                  return `${ctx.label}: ${fmt.format(Number(val || 0))}`;
-                },
-              },
-            },
-          },
-        },
-      });
-    }
+  //     perfilChartRef.current = new Chart(perfilRef.current, {
+  //       type: "doughnut",
+  //       data: {
+  //         labels: ["Servidores", "Cidadãos", "Representantes"],
+  //         datasets: [
+  //           {
+  //             data: display,
+  //             backgroundColor: ["#2563eb", "#60a5fa", "#93c5fd"],
+  //             borderColor: "#ffffff",
+  //             borderWidth: 2,
+  //             offset: display.map((_, i) => (i === 0 ? 8 : 0)),
+  //             hoverOffset: 10,
+  //           },
+  //         ],
+  //       },
+  //       options: {
+  //         responsive: true,
+  //         maintainAspectRatio: false,
+  //         cutout: "45%",
+  //         plugins: {
+  //           legend: { position: "bottom" },
+  //           tooltip: {
+  //             callbacks: {
+  //               label: (ctx: any) => {
+  //                 const idx = ctx.dataIndex ?? 0;
+  //                 const val = raw[idx] ?? 0;
+  //                 return `${ctx.label}: ${fmt.format(Number(val || 0))}`;
+  //               },
+  //             },
+  //           },
+  //         },
+  //       },
+  //     });
+  //   }
 
-    perfis();
-    return () => {
-      if (perfilChartRef.current) perfilChartRef.current.destroy();
-    };
-  }, [fmt]);
+  //   perfis();
+  //   return () => {
+  //     if (perfilChartRef.current) perfilChartRef.current.destroy();
+  //   };
+  // }, [fmt]);
 
   /** ----------------- ECONÔMETRO ----------------- */
   useEffect(() => {
     async function carregarEconomometro() {
-      const r = await fetch(`${API_BASE_URL}/economometro?periodo=${ecoPeriodo}`);
+      const r = await fetch(
+        `${API_BASE_URL}/economometro?periodo=${ecoPeriodo}`
+      );
       const data = await r.json();
 
       const folhas = Number(data.folhas || 0);
@@ -367,31 +422,31 @@ export default function Visaogeral() {
         const datasets =
           listaBairros.length > 0
             ? listaBairros.map((bairro, idx) => {
-                const data = mesesFixos.map((m) => {
-                  const row = (meses || []).find(
-                    (r: any) => r.bairro === bairro && r.mes === m
-                  );
-                  return row ? Number(row.total || 0) : 0;
-                });
+              const data = mesesFixos.map((m) => {
+                const row = (meses || []).find(
+                  (r: any) => r.bairro === bairro && r.mes === m
+                );
+                return row ? Number(row.total || 0) : 0;
+              });
 
-                return {
-                  label: bairro,
-                  data,
-                  borderColor: cores[idx],
-                  backgroundColor: "transparent",
-                  borderWidth: 2,
-                  pointRadius: 3,
-                  tension: 0.25,
-                };
-              })
+              return {
+                label: bairro,
+                data,
+                borderColor: cores[idx],
+                backgroundColor: "transparent",
+                borderWidth: 2,
+                pointRadius: 3,
+                tension: 0.25,
+              };
+            })
             : [
-                {
-                  label: "Sem dados",
-                  data: new Array(labels.length).fill(0),
-                  borderColor: "#9ca3af",
-                  backgroundColor: "transparent",
-                },
-              ];
+              {
+                label: "Sem dados",
+                data: new Array(labels.length).fill(0),
+                borderColor: "#9ca3af",
+                backgroundColor: "transparent",
+              },
+            ];
 
         topBairrosChartRef.current = new Chart(topBairrosRef.current, {
           type: "line",
@@ -417,33 +472,67 @@ export default function Visaogeral() {
     };
   }, []);
 
-  /** ----------------- INDICADORES POR PERÍODO (3 MINI-CHARTS) ----------------- */
-  useEffect(() => {
-    async function carregarIndicadores() {
-      const [rServ, rSet, rTaxa] = await Promise.all([
-        fetch(
-          `${API_BASE_URL}/indicadores/servicos-top5?periodo=${periodoIndicadores}`
-        ),
-        fetch(
-          `${API_BASE_URL}/indicadores/setores-top5?periodo=${periodoIndicadores}`
-        ),
-        fetch(
-          `${API_BASE_URL}/indicadores/taxa-resolucao?periodo=${periodoIndicadores}`
-        ),
+/** ----------------- INDICADORES POR PERÍODO (UNIFICADO) ----------------- */
+useEffect(() => {
+  async function carregarIndicadores() {
+    try {
+      const [
+        rServ,
+        rSet,
+        rTaxaResolucao,
+      ] = await Promise.all([
+        fetch(`${API_BASE_URL}/indicadores-periodo/servicos?period=${periodoIndicadores}`),
+        fetch(`${API_BASE_URL}/indicadores-periodo/setores?period=${periodoIndicadores}`),
+        fetch(`${API_BASE_URL}/indicadores/taxa-resolucao?periodo=${periodoIndicadores}`),
       ]);
 
-      const [servicos, setores, taxa] = await Promise.all([
-        rServ.json(),
-        rSet.json(),
-        rTaxa.json(),
-      ]);
+      const servicos = await rServ.json();
+      const setores = await rSet.json();
+      const taxa = await rTaxaResolucao.json();
 
-      /** Mini gráfico: serviços mais solicitados */
+      // ================================
+      // DIAS DO PERÍODO
+      // ================================
+      const inicio = new Date(taxa.inicio);
+      const fim = new Date(taxa.fim);
+
+      const diasPeriodo = Math.max(
+        1,
+        Math.floor((fim.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)) + 1
+      );
+
+      // ================================
+      // SALVAR TAXAS E TEMPOS
+      // (agora recebidos EM MINUTOS do backend)
+      // ================================
+   setTaxaResolucaoCaixa({
+  iniciadas: taxa.iniciadas,
+  resolvidas: taxa.resolvidas,
+  respondidas: taxa.respondidas,
+
+  taxa_respostas: taxa.taxa_respostas,
+  taxa_resolucao: taxa.taxa_resolucao,
+
+  tempo_medio_conclusao_min: taxa.tempo_medio_conclusao_min,
+});
+
+
+      // ================================
+      // MÉDIA DIÁRIA
+      // ================================
+      setIndicadoresExtra({
+        mediaPorDia: Number(taxa.media_diaria || 0),
+        diasPeriodo,
+      });
+
+      // ================================
+      // GRÁFICO SERVIÇOS
+      // ================================
       if (miniServicesRef.current) {
         if (miniServicesChartRef.current)
           miniServicesChartRef.current.destroy();
 
-        const labels = servicos.map((s: any) => s.servico || "—");
+        const labels = servicos.map((s: any) => s.service_name || "—");
         const valores = servicos.map((s: any) => Number(s.total || 0));
 
         miniServicesChartRef.current = new Chart(miniServicesRef.current, {
@@ -463,19 +552,18 @@ export default function Visaogeral() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
-            scales: {
-              x: { beginAtZero: true },
-              y: { ticks: { autoSkip: false, maxRotation: 0, minRotation: 0 } },
-            },
           },
         });
       }
 
-      /** Mini gráfico: setores mais solicitados */
+      // ================================
+      // GRÁFICO SETORES
+      // ================================
       if (miniSectorsRef.current) {
-        if (miniSectorsChartRef.current) miniSectorsChartRef.current.destroy();
+        if (miniSectorsChartRef.current)
+          miniSectorsChartRef.current.destroy();
 
-        const labels = setores.map((s: any) => s.setor || "—");
+        const labels = setores.map((s: any) => s.sector_name || "—");
         const valores = setores.map((s: any) => Number(s.total || 0));
 
         miniSectorsChartRef.current = new Chart(miniSectorsRef.current, {
@@ -495,84 +583,43 @@ export default function Visaogeral() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
-            scales: {
-              x: { beginAtZero: true },
-              y: { ticks: { autoSkip: false, maxRotation: 0, minRotation: 0 } },
-            },
           },
         });
       }
 
-      /** Mini gráfico: taxa de resolução */
-      if (miniResolutionRef.current) {
-        if (miniResolutionChartRef.current)
-          miniResolutionChartRef.current.destroy();
-
-        const abertas = Number(taxa?.abertas || 0);
-        const andamento = Number(taxa?.andamento || 0);
-        const concluidas = Number(taxa?.concluidas || 0);
-        const respondidas = Number(taxa?.respondidas || 0);
-        // expõe valores globalmente para usar no componente da barra
-;(window as any).__taxa_abertas = abertas;
-;(window as any).__taxa_andamento = andamento;
-;(window as any).__taxa_respondidas = respondidas;
-;(window as any).__taxa_concluidas = concluidas;
-
-        const total = abertas + andamento + concluidas + respondidas;
-        const media = total > 0 ? (concluidas / total) * 100 : 0;
-        setTaxaResolucaoMedia(media);
-
-        const labels = ["Abertas", "Em andamento", "Concluídas", "Respondidas"];
-        const valores = [abertas, andamento, concluidas, respondidas];
-
-        miniResolutionChartRef.current = new Chart(miniResolutionRef.current, {
-          type: "doughnut",
-          data: {
-            labels,
-            datasets: [
-              {
-                data: valores,
-                backgroundColor: ["#f59e0b", "#60a5fa", "#10b981", "#93c5fd"],
-                borderColor: "#ffffff",
-                borderWidth: 2,
-              },
-            ],
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { position: "bottom" } },
-          },
-        });
-      }
+    } catch (err) {
+      console.error("Erro carregarIndicadores:", err);
     }
+  }
 
-    carregarIndicadores();
+  carregarIndicadores();
 
-    return () => {
-      if (miniServicesChartRef.current) miniServicesChartRef.current.destroy();
-      if (miniSectorsChartRef.current) miniSectorsChartRef.current.destroy();
-      if (miniResolutionChartRef.current)
-        miniResolutionChartRef.current.destroy();
-    };
-  }, [periodoIndicadores]);
+  return () => {
+    if (miniServicesChartRef.current)
+      miniServicesChartRef.current.destroy();
+    if (miniSectorsChartRef.current)
+      miniSectorsChartRef.current.destroy();
+  };
+}, [periodoIndicadores]);
 
-  /** ----------------- RESUMO POR ANO (TABELA + ECONOMIA TOTAL) ----------------- */
+
+  /** ----------------- RESUMO POR PERÍODO / ANO ----------------- */
   useEffect(() => {
-    async function carregarResumoAno() {
-      const r = await fetch(`${API_BASE_URL}/resumo-periodo?ano=${anoSel}`);
-      const rows: EconomiaResumoRow[] = await r.json();
-
-      setEconomiaResumo(rows || []);
-
-      const totalEco = rows.reduce(
-        (sum, row) => sum + Number(row.economia_gerada || 0),
-        0
+    async function carregarResumoPeriodo() {
+      const r = await fetch(
+        `${API_BASE_URL}/resumo-periodo?periodo=${periodoIndicadores}&ano=${anoSel}`
       );
-      setEconomiaTotalAno(totalEco);
+      const data = await r.json();
+
+      setEconomiaResumo(Array.isArray(data) ? data : data.meses || []);
+      setEconomiaTotalAno(Number(data.total?.dinheiro || 0));
     }
-    carregarResumoAno();
-  }, [anoSel]);
+
+    carregarResumoPeriodo();
+  }, [anoSel, periodoIndicadores]);
+
+
+
 
   /** ----------------- DERIVADOS PARA RENDERIZAÇÃO ----------------- */
   const eficienciaFmt =
@@ -584,9 +631,6 @@ export default function Visaogeral() {
     kpis.qualidade_media != null && Number(kpis.qualidade_media) > 0
       ? Number(kpis.qualidade_media).toFixed(2)
       : "—";
-
-  const taxaResolucaoMediaFmt =
-    taxaResolucaoMedia != null ? `${taxaResolucaoMedia.toFixed(1)}%` : "--%";
 
   /** ----------------- RENDER ----------------- */
   return (
@@ -663,7 +707,6 @@ export default function Visaogeral() {
         <SectionTitle
           title="🌱 Economômetro"
           subtitle="Impacto ambiental e financeiro gerado pelo uso do sistema"
-          infoTooltip="Cálculo baseado em economia média por solicitação e tramitação digital."
         />
 
         <div className="economometro-grid">
@@ -686,7 +729,14 @@ export default function Visaogeral() {
           </div>
 
           <div className="eco-card">
-            <div className="eco-icon">💰</div>
+            <div
+              className="eco-icon"
+              title="A economia financeira é calculada multiplicando o total de folhas economizadas pelo custo médio de R$ 0,35 por página impressa."
+              style={{ cursor: "help" }}
+            >
+              💰
+            </div>
+
             <h3 className="eco-title">Economia Financeira</h3>
             <div className="eco-value">
               {economometro
@@ -727,11 +777,16 @@ export default function Visaogeral() {
           subtitle="Evolução do volume total de demanda e participação dos bairros ao longo dos meses"
         />
 
-        <div className="section-content-flex" style={{ display: "flex", gap: 16 }}>
+        <div
+          className="section-content-flex"
+          style={{ display: "flex", gap: 16 }}
+        >
           <div className="ranking-box" style={{ flex: 1 }}>
             <h3 className="chart-title">Evolução de uso (últimos 12 meses)</h3>
-            <p className="chart-subtitle">Volume mensal de solicitações/processos</p>
-            <div className="chart-container" style={{ height: 330 }}>
+            <p className="chart-subtitle">
+              Volume mensal de solicitações/processos
+            </p>
+            <div className="chart-container" style={{ height: 380 }}>
               <canvas ref={evolucaoRef}></canvas>
             </div>
           </div>
@@ -739,132 +794,204 @@ export default function Visaogeral() {
           <div className="ranking-box" style={{ flex: 1 }}>
             <h3 className="chart-title">Bairros que mais solicitam</h3>
             <p className="chart-subtitle">Evolução mensal por bairro</p>
-            <div className="chart-container" style={{ height: 330 }}>
+            <div className="chart-container" style={{ height: 380 }}>
               <canvas ref={topBairrosRef}></canvas>
             </div>
           </div>
         </div>
       </section>
 
-     <section className="dash-section dash-period-indicators">
-
-  {/* TÍTULO CENTRALIZADO */}
-  <div style={{ textAlign: "center", marginBottom: 12 }}>
-    <SectionTitle
-      title="Indicadores por Período"
-      subtitle="Serviços e setores mais demandados no intervalo selecionado"
-    />
-
-    {/* BOTÕES ABAIXO DO TÍTULO */}
-    <div
-      className="period-filter"
-      style={{
-        marginTop: 8,
-        display: "flex",
-        justifyContent: "center",
-        flexWrap: "wrap",
-        gap: 6,
-      }}
-    >
-      {[
-        { label: "Hoje", value: "today" },
-        { label: "Últimos 7 dias", value: "7d" },
-        { label: "Últimos 30 dias", value: "30d" },
-        { label: "Últimos 90 dias", value: "90d" },
-        { label: "Últimos 6 meses", value: "6m" },
-        { label: "Último ano", value: "1y" },
-        { label: "Todo período", value: "all" },
-      ].map((p) => (
-        <button
-          key={p.value}
-          className={`period-btn ${
-            periodoIndicadores === p.value ? "active" : ""
-          }`}
-          onClick={() => setPeriodoIndicadores(p.value as Periodo)}
-        >
-          {p.label}
-        </button>
-      ))}
-    </div>
-  </div>
-
-  {/* DOIS GRÁFICOS LADO A LADO E MAIORES */}
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: "1fr 1fr",
-      gap: 16,
-      width: "100%",
-      marginTop: 20,
-    }}
-  >
-    {/* SERVIÇOS */}
-    <article className="period-card" style={{ height: 340 }}>
-      <header className="period-card-header">
-        <h3>Serviços mais solicitados</h3>
-        <span className="period-card-subtitle">Top 5 por volume</span>
-      </header>
-      <div className="period-card-body">
-        <div className="mini-chart-wrapper" style={{ height: "100%" }}>
-          <canvas ref={miniServicesRef}></canvas>
+      {/* INDICADORES POR PERÍODO */}
+      <section className="dash-section dash-period-indicators">
+        <div style={{ textAlign: "center", marginBottom: 12 }}>
+          <SectionTitle
+            title="Indicadores por Período"
+            subtitle="Serviços, setores e desempenho operacional dentro do intervalo selecionado"
+          />
         </div>
-      </div>
-    </article>
 
-    {/* SETORES */}
-    <article className="period-card" style={{ height: 340 }}>
-      <header className="period-card-header">
-        <h3>Setores mais solicitados</h3>
-        <span className="period-card-subtitle">Top 5 por volume</span>
-      </header>
-      <div className="period-card-body">
-        <div className="mini-chart-wrapper" style={{ height: "100%" }}>
-          <canvas ref={miniSectorsRef}></canvas>
-        </div>
-      </div>
-    </article>
-  </div>
-
-  {/* KPI CENTRALIZADO EMBAIXO */}
-  <div
-    style={{
-      marginTop: 28,
-      textAlign: "center",
-    }}
-  >
-    <div className="period-card-kpi">
-      <span className="kpi-value" style={{ fontSize: "2.4rem" }}>
-        {taxaResolucaoMediaFmt}
-      </span>
-      <div className="kpi-label" style={{ fontSize: ".95rem", color: "#6b7280" }}>
-        taxa média de resolução no período
-      </div>
-    </div>
-  </div>
-
-</section>
-
-
-      {/* TABELA FINAL: RESUMO DO ANO */}
-      <section className="dash-section period-section">
+        {/* BOTÕES DE PERÍODO */}
         <div
-          className="dash-section-header"
+          className="period-filter"
           style={{
+            marginTop: 8,
             display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            gap: 16,
+            justifyContent: "center",
+            flexWrap: "wrap",
+            gap: 6,
           }}
         >
+          {[
+            { label: "Hoje", value: "today" },
+            { label: "Últimos 7 dias", value: "7d" },
+            { label: "Últimos 30 dias", value: "30d" },
+            { label: "Últimos 90 dias", value: "90d" },
+            { label: "Últimos 6 meses", value: "6m" },
+            { label: "Este ano", value: "1y" },
+            { label: "Ano passado", value: "ano_passado" },
+            { label: "Todo período", value: "all" },
+          ].map((p) => (
+            <button
+              key={p.value}
+              className={`period-btn ${periodoIndicadores === p.value ? "active" : ""
+                }`}
+              onClick={() => setPeriodoIndicadores(p.value as Periodo)}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        {/* DOIS GRÁFICOS LADO A LADO */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 16,
+            width: "100%",
+            marginTop: 30,
+          }}
+        >
+          {/* SERVIÇOS */}
+          <article className="period-card">
+            <header className="period-card-header">
+              <h3>Serviços mais solicitados</h3>
+              <span className="period-card-subtitle">Top 5 por volume</span>
+            </header>
+            <div className="period-card-body">
+              <div className="mini-chart-wrapper" style={{ height: 260 }}>
+                <canvas ref={miniServicesRef}></canvas>
+              </div>
+            </div>
+          </article>
+
+          {/* SETORES */}
+          <article className="period-card">
+            <header className="period-card-header">
+              <h3>Setores mais solicitados</h3>
+              <span className="period-card-subtitle">Top 5 por volume</span>
+            </header>
+            <div className="period-card-body">
+              <div className="mini-chart-wrapper" style={{ height: 260 }}>
+                <canvas ref={miniSectorsRef}></canvas>
+              </div>
+            </div>
+          </article>
+        </div>
+
+
+<div
+  style={{
+    marginTop: 24,
+    display: "grid",
+    gridTemplateColumns: "repeat(4, 1fr)",
+    gap: 16,
+    width: "100%",
+  }}
+>
+
+  {/* 1) TAXA DE RESPOSTAS */}
+  <div className={`kpi-card ${getTaxaClass(taxaResolucaoCaixa?.taxa_respostas || 0)}`}>
+    <TitleWithTooltip
+      tooltip="Percentual de solicitações iniciadas que receberam ao menos uma resposta (inclui concluídas)."
+      className="kpi-title"
+    >
+      Taxa de respostas
+    </TitleWithTooltip>
+
+    <div className="kpi-value">
+      {Number(taxaResolucaoCaixa?.taxa_respostas ?? 0).toFixed(1)}%
+    </div>
+
+    <div className="kpi-subtext">
+      Iniciadas: {fmt.format(taxaResolucaoCaixa?.iniciadas || 0)} -
+      Respondidas: {fmt.format(taxaResolucaoCaixa?.respondidas || 0)}
+    </div>
+  </div>
+
+
+  {/* 3) TAXA DE RESOLUÇÃO */}
+  <div className={`kpi-card ${getTaxaClass(taxaResolucaoCaixa?.taxa_resolucao || 0)}`}>
+    <TitleWithTooltip
+      tooltip="Percentual de solicitações concluídas em relação às iniciadas no período selecionado."
+      className="kpi-title"
+    >
+      Taxa de resolução
+    </TitleWithTooltip>
+
+    <div className="kpi-value">
+      {Number(taxaResolucaoCaixa?.taxa_resolucao ?? 0).toFixed(1)}%
+    </div>
+
+    <div className="kpi-subtext">
+       Iniciadas: {fmt.format(taxaResolucaoCaixa?.iniciadas || 0)} -
+      Concluídas: {fmt.format(taxaResolucaoCaixa?.resolvidas || 0)} 
+   
+    </div>
+  </div>
+
+
+  {/* 2) MÉDIA DIÁRIA */}
+  <div className={`kpi-card ${getMediaClass(indicadoresExtra.mediaPorDia)}`}>
+    <TitleWithTooltip
+      tooltip="Média diária = Total de solicitações abertas no período ÷ número de dias considerados."
+      className="kpi-title"
+    >
+      Média diária de solicitações
+    </TitleWithTooltip>
+
+    <div className="kpi-value">
+      {Number(indicadoresExtra.mediaPorDia).toFixed(1)}
+    </div>
+
+    <div className="kpi-subtext">
+      Dias: {indicadoresExtra.diasPeriodo}
+    </div>
+  </div>
+
+  {/* 4) TEMPO MÉDIO DE CONCLUSÃO */}
+  <div
+    className={`kpi-card ${getTempoClass(
+      Math.floor((taxaResolucaoCaixa?.tempo_medio_conclusao_min || 0) / 1440)
+    )}`}
+  >
+    <TitleWithTooltip
+      tooltip="Tempo médio entre a abertura e a conclusão das solicitações resolvidas no período."
+      className="kpi-title"
+    >
+      Tempo médio de resolução
+    </TitleWithTooltip>
+
+    <div className="kpi-value">
+      {formatarTempo(taxaResolucaoCaixa?.tempo_medio_conclusao_min || 0)}
+    </div>
+  </div>
+
+</div>
+
+ 
+      </section>
+
+      {/* TABELA FINAL: RESUMO DO ANO / PERÍODO */}
+      <section className="dash-section period-section">
+        <div style={{ textAlign: "center", marginBottom: 16 }}>
           <SectionTitle
             title="Dados do período por ano"
             subtitle="Consolidados mensais de solicitações, pessoas atendidas, notificações, tramitações e economia gerada"
           />
 
-          <div>
+          {/* SELECT ANO ALINHADO À DIREITA */}
+          <div
+            style={{
+              marginTop: 8,
+              display: "flex",
+              justifyContent: "flex-end",
+              width: "100%",
+            }}
+          >
             <select
               id="vg-ano-select"
-              className="ano-select"
+              className="eco-select"
               value={String(anoSel)}
               onChange={(e) => setAnoSel(Number(e.target.value))}
             >

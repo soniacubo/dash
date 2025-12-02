@@ -1,0 +1,3415 @@
+
+
+/* Layout geral */
+.indicadores-container {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 20px;
+  width: 100%;
+  align-items: flex-start;
+}
+
+/* Título */
+.indicadores-title {
+  margin-bottom: 16px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* Esquerda */
+.indicadores-left {
+  background: #fff;
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: 0 4px 12px rgba(15,23,42,0.07);
+}
+
+/* Scroll vertical no gráfico */
+.scrollable-box {
+  height: 340px; 
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+/* Direita (mini gráficos) */
+.indicadores-right {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.mini-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 4px 12px rgba(15,23,42,0.07);
+}
+
+.mini-chart {
+  height: 160px;
+}
+
+/* Caixas */
+.chart-box {
+  position: relative;
+  width: 100%;
+}
+
+/* Título de gráfico */
+.chart-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #111827;
+}
+/* ==============================
+   TABELA DE SETORES
+================================= */
+
+.tabela-setores {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.9rem;
+}
+
+.tabela-setores thead th {
+  background: #f3f6fc;
+  padding: 12px;
+  text-align: center;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.tabela-setores tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1f1f1;
+  vertical-align: middle;
+}
+
+.nivel-0 td {
+  background: #f8faff;
+  font-weight: 600;
+}
+
+.setor-col {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.toggle {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0 4px;
+}
+
+/* Tooltip de usuários */
+.user-tooltip-trigger {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  cursor: pointer;
+  position: relative;
+}
+
+.user-tooltip {
+  position: absolute;
+  top: 22px;
+  left: -10px;
+  width: 260px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #ddd;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  z-index: 50;
+}
+
+.tooltip-user-row {
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+}
+
+.tooltip-user-row small {
+  display: block;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.toggle-all-btn {
+  padding: 6px 12px;
+  background: #2563eb;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.toggle-all-btn:hover {
+  background: #1d4ed8;
+}
+
+
+/* ============================================================
+   🔵 TÍTULOS DAS SEÇÕES
+   Upgrade visual para toda a dashboard
+============================================================ */
+
+.section-title-block {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.section-title {
+  font-size: 1.55rem;            /* 🔥 maior e mais elegante */
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+  letter-spacing: -0.2px;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.06);  /* 🎯 leve sombra */
+}
+
+.section-info {
+  font-size: 0.9rem;
+  margin-left: 6px;
+  cursor: help;
+  opacity: 0.8;
+}
+
+.section-info:hover {
+  opacity: 1;
+}
+
+.section-subtitle {
+  margin-top: 6px;
+  font-size: 0.95rem;
+  color: #6b7280;
+  font-weight: 400;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.04);
+}
+
+.section-title {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.section-title-main {
+  margin: 0;
+  font-size: 1.55rem !important;   /* AQUI VOCÊ AUMENTA */
+  font-weight: 700;
+  color: #111827;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.08); /* leve sombra */
+}
+
+.section-title-info {
+  font-size: 0.9rem;
+  margin-left: 6px;
+  cursor: help;
+  opacity: 0.8;
+}
+
+.section-title-sub {
+  margin-top: 4px;
+  font-size: 1rem !important;
+  color: #6b7280;
+}
+
+
+/* ======================
+   TITULOS DE SESSÃO
+====================== */
+
+.section-title {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.section-title-main {
+  margin: 0;
+  font-size: 1.75rem;      /* tamanho grande e profissional */
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.5px;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.section-title-info {
+  font-size: 1rem;
+  opacity: 0.85;
+  cursor: help;
+}
+
+.section-title-sub {
+  margin-top: 6px;
+  font-size: 1rem;
+  color: #6b7280;
+}
+
+.dash-tooltip-trigger:hover + .dash-tooltip,
+.dash-tooltip-trigger:hover + .dash-tooltip + .dash-tooltip-arrow {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+
+
+/* =======================================================
+   RESET + BASE
+======================================================= */
+/* ✅ CARDS ELEVADOS — KPIs PRINCIPAIS */
+.user-stat-card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+  border: 1px solid #eef2f7;
+  text-align: center;
+  transition: all 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* hover suave */
+.user-stat-card:hover {
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.10);
+  transform: translateY(-2px);
+}
+
+/* valor principal */
+.user-stat-card strong {
+  font-size: 1.9rem;
+  font-weight: 700;
+  margin-top: 4px;
+  color: #1e3a8a;
+}
+
+/* subtítulo */
+.kpi__sub {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+/* ajuste das 6 colunas */
+#vg-kpis {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+  width: 100%;
+}
+
+/* responsividade */
+@media (max-width: 1280px) {
+  #vg-kpis {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  #vg-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  #vg-kpis {
+    grid-template-columns: 1fr;
+  }
+}
+/* ===== ECONOMETRO ===== */
+
+.econometro-section {
+  padding-top: 6px;
+}
+
+.economometro-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.economometro-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.economometro-subtitle {
+  color: #6b7280;
+  font-size: .9rem;
+  margin-bottom: 18px;
+}
+
+.economometro-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+/* ===== ECONÔMETRO UPGRADE ===== */
+
+.economometro-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+
+.eco-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 22px 20px;
+  box-shadow: 0 4px 12px rgba(15,23,42,0.06);
+  text-align: center; /* ✅ CENTRALIZA TUDO */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.eco-icon {
+  font-size: 2.4rem;
+  margin-bottom: 10px;
+  line-height: 1;
+}
+
+.eco-title {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.eco-value {
+  font-size: 2.1rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 6px;
+}
+
+.eco-desc {
+  font-size: .85rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* ===== HEADER ===== */
+.economometro-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  margin-bottom: 18px;
+}
+
+/* título agrupado */
+.economometro-title-box {
+  flex: 1;
+  text-align: center;
+}
+
+.economometro-title {
+  font-size: 1.45rem;
+  font-weight: 700;
+  margin: 0;
+  color: #111827;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.info-icon {
+  font-size: .9rem;
+  cursor: help;
+  color: #6b7280;
+}
+
+/* subtítulo */
+.economometro-sub {
+  margin-top: 4px;
+  font-size: .95rem;
+  color: #6b7280;
+}
+
+/* wrapper p/ fixar o select */
+.eco-select-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+/* select minimalista */
+.eco-select {
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  border-radius: 10px;
+  font-size: .9rem;
+  color: #374151;
+  outline: none;
+}
+
+.eco-select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37,99,235,.15);
+}
+
+/* ===== GRID ===== */
+.economometro-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+/* cards */
+.eco-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 22px 20px;
+  text-align: center;
+  box-shadow: 0 4px 10px rgba(15,23,42,0.05);
+}
+
+.eco-title {
+  margin: 8px 0 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.eco-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.eco-desc {
+  font-size: .85rem;
+  color: #6b7280;
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 900px) {
+  .economometro-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .eco-select-wrapper {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .eco-select {
+    width: 100%;
+  }
+
+  .economometro-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* mobile */
+@media (max-width: 900px) {
+  .economometro-grid {
+    grid-template-columns: 1fr;
+  }
+  /* container principal */
+.economometro-header {
+  display: flex;
+  justify-content: space-between; /* ✅ select vai pra direita */
+  align-items: center;
+  width: 100%;
+  justify-content: space-between; 
+  margin-bottom: 16px;
+}
+
+/* bloco do título */
+.economometro-title-box {
+  flex: 1;
+  text-align: center; /* ✅ centraliza perfeitamente */
+}
+
+/* título */
+.economometro-title {
+  font-size: 1.45rem;
+  font-weight: 700;
+  margin: 0;
+  color: #111827;
+}
+
+/* subtítulo */
+.economometro-sub {
+  margin-top: 4px;
+  font-size: .95rem;
+  color: #6b7280;
+}
+
+/* select minimalista */
+.eco-select {
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  border-radius: 8px;
+  font-size: .9rem;
+  color: #374151;
+  outline: none;
+}
+
+.eco-select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, .15);
+}
+
+}
+
+.eco-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 4px 10px rgba(15,23,42,0.05);
+}
+
+.eco-card h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.eco-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 6px;
+}
+
+.eco-desc {
+  font-size: .85rem;
+  color: #6b7280;
+}
+/* tabela do período — alinha TH e TD igualmente */
+.period-table th,
+.period-table td {
+  text-align: center;
+  padding: 10px 8px;
+  vertical-align: middle;
+}
+
+/* deixa o primeiro (Período) alinhado à esquerda se preferir */
+.period-table th:first-child,
+.period-table td:first-child {
+  text-align: left;
+}
+
+/* largura equilibrada das colunas */
+.period-table th {
+  white-space: nowrap;
+  font-weight: 600;
+}
+.metric-card {
+  padding: 18px 22px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Título menor e mais refine */
+.metric-card .metric-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+/* Valor principal maior (KPIs) */
+.metric-card .metric-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+/* Subinfo (resolvidas / iniciadas / etc) */
+.metric-card .metric-sub {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-top: -4px;
+}
+
+.period-table thead th {
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.period-table tbody tr:hover {
+  background: #f3f4f6;
+}
+
+/* responsivo */
+@media (max-width: 900px) {
+  .economometro-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.period-btn {
+  padding: 6px 14px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  border-radius: 6px;
+  font-size: .85rem;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.period-btn:hover {
+  background: #f3f4f6;
+}
+
+.period-btn.active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+  font-weight: 600;
+}
+
+/* ===== TÍTULOS PADRÃO ===== */
+.section-title {
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 10px;
+}
+
+.section-subtitle {
+  text-align: center;
+  font-size: .95rem;
+  color: #6b7280;
+  margin: 4px 0 14px;
+}
+
+.chart-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 2px;
+}
+
+.chart-subtitle {
+  font-size: .85rem;
+  color: #6b7280;
+  margin: 0 0 8px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 30px;
+    color: #222;
+    background-color: #f0f3f7;
+}
+
+/* Container Principal */
+.main-container {
+    max-width: 1500px;
+    width: 100%;
+    margin: 40px auto;
+    padding: 24px;
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(15,23,42,0.1);
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+}
+
+/* =======================================================
+   NAV SUPERIOR
+======================================================= */
+
+.top-nav {
+    width: 100%;
+    background: #ffffff;
+    padding: 16px 24px;
+    border-radius: 14px;
+    box-shadow: 0 4px 12px rgba(15,23,42,.06);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.top-logo {
+    height: 45px;
+    opacity: 0.95;
+    margin-right: 20px;
+}
+
+.top-nav-left,
+.top-nav-right {
+    width: 180px;
+    display: flex;
+    align-items: center;
+}
+
+.top-nav-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+}
+
+.top-nav-items {
+    display: flex;
+    gap: 32px;
+}
+
+.nav-item {
+    font-size: 15px;
+    color: #555;
+    text-decoration: none;
+    padding: 6px 14px;
+    border-radius: 8px;
+    transition: 0.25s;
+    white-space: nowrap;
+}
+
+.nav-item:hover {
+    background: #f3f7ff;
+    color: #2563eb;
+}
+.nav-item:focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: 2px;
+    border-radius: 8px;
+}
+
+.nav-item.active {
+    background: #e6f0ff;
+    color: #2563eb;
+    font-weight: 600;
+}
+
+/* =======================================================
+   TITULOS
+======================================================= */
+
+.titulo-pagina {
+    margin: 0;
+    margin-top: 12px;
+    font-size: 1.9rem;
+    font-weight: 700;
+    text-align: center;
+    color: #111827;
+}
+
+/* =======================================================
+   SECTIONS / BLOCOS
+======================================================= */
+
+.dash-section {
+    margin: 24px 0;
+    padding: 20px 24px;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 4px 14px rgba(15,23,42,0.06);
+    border: 1px solid #e5e7eb;
+}
+
+.dash-section.no-shadow {
+    box-shadow: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+}
+
+.dash-section-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+/* ============================================================
+   RESET BÁSICO
+============================================================ */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #f3f4f6;
+  font-family: "Inter", Arial, sans-serif;
+  color: #111827;
+}
+
+.main-container {
+  max-width: 1500px;
+  margin: 30px auto;
+  padding: 0 20px;
+}
+
+/* ============================================================
+   SEÇÕES
+============================================================ */
+.dash-section {
+  background: #fff;
+  padding: 22px 26px;
+  border-radius: 16px;
+  margin-top: 28px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.03);
+}
+
+.dash-section-header h2 {
+  margin-bottom: 10px;
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+
+/* ============================================================
+   KPI EXECUTIVO — ESTILO ECONOMETRO
+============================================================ */
+.kpi-executivo-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.kpi-executivo-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 22px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  transition: .2s;
+}
+
+.kpi-executivo-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 18px rgba(0,0,0,0.08);
+}
+
+.kpi-executivo-icon {
+  font-size: 28px;
+  margin-bottom: 6px;
+}
+
+.kpi-executivo-titulo {
+  color: #374151;
+  font-size: 0.95rem;
+}
+
+.kpi-executivo-valor {
+  font-size: 1.9rem;
+  font-weight: 700;
+  margin-top: 8px;
+  color: #111827;
+}
+
+.kpi-executivo-sub {
+  margin-top: 4px;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+/* ============================================================
+   INDICADORES GRID (GRÁFICOS)
+============================================================ */
+.indicadores-container {
+  display: grid;
+  grid-template-columns: 45% 55%;
+  gap: 22px;
+}
+
+.indicadores-left {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.indicadores-right {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.mini-card {
+  background: #ffffff;
+  padding: 22px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.04);
+}
+
+.chart-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.chart-box {
+  width: 100%;
+  height: 340px;
+}
+
+.mini-chart {
+  height: 280px;
+}
+
+/* ============================================================
+   RANKING CARD — gráfico de Top Serviços
+============================================================ */
+/* ============================================================
+   INDICADORES POR SETOR — TÍTULOS
+============================================================ */
+.section-title-wrapper {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.section-title-main {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.section-title-sub {
+  margin-top: 4px;
+  color: #6b7280;
+  font-size: .95rem;
+}
+
+
+
+/* ============================================================
+   CARDS — INDICADORES (mais eficiente, mais usuários, etc)
+============================================================ */
+.setores-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin-top: 20px;
+}
+
+.setor-kpi-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px 18px;
+  text-align: center;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+}
+
+.setor-kpi-icon {
+  font-size: 20px;
+  margin-bottom: 3px;
+}
+
+.setor-kpi-label {
+  font-size: .95rem;
+  color: #6b7280;
+}
+
+.setor-kpi-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-top: 4px;
+}
+
+.setor-kpi-sector {
+  margin-top: 2px;
+  font-size: .9rem;
+  color: #374151;
+  font-weight: 600;
+}
+
+
+
+/* ============================================================
+   MINI-GRÁFICOS (barrinhas horizontais)
+============================================================ */
+.setores-mini-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-top: 28px;
+}
+
+.mini-chart-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 18px 20px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+}
+
+.mini-chart-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.mini-chart-sub {
+  font-size: .85rem;
+  color: #6b7280;
+}
+
+.mini-chart-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0 0;
+}
+
+.mini-chart-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.mini-chart-label {
+  min-width: 140px;
+  font-size: .9rem;
+  color: #374151;
+}
+
+.mini-chart-bar-wrapper {
+  flex: 1;
+  background: #f3f4f6;
+  border-radius: 7px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.mini-chart-bar {
+  height: 100%;
+  background: #86efac;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  padding-left: 6px;
+  font-size: .8rem;
+  font-weight: 600;
+  color: #064e3b;
+}
+
+.mini-chart-bar-secondary {
+  background: #93c5fd !important;
+  color: #1e3a8a !important;
+}
+
+.mini-chart-bar-value {
+  font-size: .8rem;
+  font-weight: 600;
+}
+
+
+
+/* ============================================================
+   RANKINGS — GRID & CARDS
+============================================================ */
+.rankings-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.ranking-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+}
+
+.ranking-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: .95rem;
+  color: #111827;
+  font-weight: 600;
+}
+
+.ranking-item {
+  display: grid;
+  grid-template-columns: 30px 1fr auto;
+  padding: 6px 0;
+  border-bottom: 1px dashed #e5e7eb;
+  align-items: center;
+}
+
+.ranking-item:last-child {
+  border-bottom: none;
+}
+
+.ranking-item-pos {
+  font-size: .9rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.ranking-item-nome {
+  font-size: .9rem;
+  color: #374151;
+}
+
+.ranking-item-valor {
+  font-weight: 600;
+  color: #111827;
+}
+
+
+
+/* ============================================================
+   TABELA HIERÁRQUICA
+============================================================ */
+#tabela-setores {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+}
+
+#tabela-setores th {
+  text-align: left;
+  padding: 10px 12px;
+  background: #f9fafb;
+  font-size: .9rem;
+  color: #374151;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.col-setor {
+  width: 42%;
+}
+
+.col-usuarios {
+  width: 10%;
+  text-align: center;
+}
+
+.col-servicos {
+  width: 12%;
+}
+
+#tabela-setores td {
+  padding: 10px 12px;
+  font-size: .9rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.nivel-0 {
+  background: #f9fafb;
+}
+
+.row-hover {
+  background: #eef2ff !important;
+}
+
+
+
+/* ============================================================
+   BOTÃO EXPANDIR / RECOLHER
+============================================================ */
+.btn-toggle-all {
+  background: #eef2ff;
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-size: .85rem;
+  cursor: pointer;
+  transition: .2s;
+}
+
+.btn-toggle-all:hover {
+  background: #e0e7ff;
+}
+
+
+
+/* ============================================================
+   COLUNA SETOR + BOTÃO DE SETA
+============================================================ */
+.td-setor {
+  position: relative;
+}
+
+.td-setor-inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.toggle {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #6b7280;
+  font-size: .9rem;
+}
+
+.toggle:hover {
+  color: #111827;
+}
+
+.td-setor-nome {
+  font-weight: 500;
+  color: #1f2937;
+}
+
+
+
+/* ============================================================
+   TOOLTIP - CONSOLIDADO
+============================================================ */
+.tooltip-consolidado {
+  position: absolute;
+  top: 30px;
+  left: 10px;
+  background: #fff;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  z-index: 50;
+  width: 240px;
+  animation: fadeIn .15s ease-out;
+}
+
+.tooltip-consolidado h4 {
+  margin: 0 0 8px 0;
+  font-size: .9rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.tooltip-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  row-gap: 4px;
+  column-gap: 10px;
+  font-size: .85rem;
+}
+
+.tooltip-grid span {
+  color: #6b7280;
+}
+
+.tooltip-grid strong {
+  color: #111827;
+}
+
+
+
+/* ============================================================
+   TOOLTIP DE USUÁRIOS (coluna direita)
+============================================================ */
+.tooltip-usuarios {
+  position: absolute;
+  right: -5px;
+  top: 28px;
+  background: #fff;
+  padding: 12px 14px;
+  width: 200px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  z-index: 30;
+}
+
+.tooltip-usuarios ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tooltip-usuarios li {
+  padding: 4px 0;
+  font-size: .85rem;
+  border-bottom: 1px dashed #e5e7eb;
+}
+
+.tooltip-usuarios li:last-child {
+  border-bottom: none;
+}
+
+.tooltip-empty {
+  color: #6b7280;
+  font-style: italic;
+}
+
+
+
+/* Tooltip Loading */
+.tooltip-loading {
+  font-size: .85rem;
+  color: #6b7280;
+}
+
+/* ============================================================
+   TÍTULO DA SEÇÃO (mesmo estilo da visão geral)
+============================================================ */
+.section-title-wrapper {
+  text-align: center;
+  margin-bottom: 20px;
+  margin-top: 10px;
+}
+
+.section-title-main {
+  margin: 0;
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.3;
+}
+
+.section-title-sub {
+  margin-top: 4px;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+/* ============================================================
+   CARDS DE INDICADORES POR SETOR
+============================================================ */
+.setores-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.setor-kpi-card {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 16px 18px;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.setor-kpi-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.setor-kpi-icon.lightning {
+  background: #eef2ff;
+}
+
+.setor-kpi-icon.star {
+  background: #fef3c7;
+}
+
+.setor-kpi-icon.users {
+  background: #ecfeff;
+}
+
+.setor-kpi-icon.trophy {
+  background: #fef2f2;
+}
+
+.setor-kpi-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+}
+
+.setor-kpi-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.setor-kpi-sector {
+  font-size: 0.86rem;
+  color: #4b5563;
+  margin-top: 2px;
+}
+
+/* ============================================================
+   GRÁFICO: SERVIÇOS POR SETOR (BARRAS + BADGE MODERNO)
+============================================================ */
+.setores-mini-charts-grid {
+  margin-top: 20px;
+}
+
+.mini-chart-card {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 18px 20px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e5e7eb;
+}
+
+.mini-chart-card-full {
+  max-height: 340px;          /* altura rolável */
+  overflow-y: auto;
+}
+
+.mini-chart-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.mini-chart-sub {
+  margin-top: 2px;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.mini-chart-list {
+  list-style: none;
+  margin: 12px 0 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mini-chart-item {
+  display: grid;
+  grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+}
+
+/* Lado esquerdo: badge + nome do setor */
+.mini-chart-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mini-rank-badge {
+  min-width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: #e5e7eb;
+  color: #374151;
+}
+
+/* destaque leve para top 3 */
+.mini-rank-badge.rank-1 {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.mini-rank-badge.rank-2 {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.mini-rank-badge.rank-3 {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.mini-chart-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #111827;
+}
+
+/* Barra à direita */
+.mini-chart-bar-wrapper {
+  width: 100%;
+  background: #f3f4f6;
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.mini-chart-bar {
+  height: 24px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding-right: 8px;
+}
+
+/* cor principal das barras de serviços */
+.mini-chart-bar-secondary {
+  background: linear-gradient(90deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+}
+
+.mini-chart-bar-value {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   HEADER DA TABELA E BOTÃO EXPANDIR/RECOLHER
+============================================================ */
+.dash-section-header-table {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.dash-section-subtitle {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.btn-toggle-all {
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35);
+  transition: 0.2s;
+  white-space: nowrap;
+}
+
+.btn-toggle-all:hover {
+  background: #1d4ed8;
+}
+
+/* ============================================================
+   TABELA HIERÁRQUICA
+============================================================ */
+#tabela-setores {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+#tabela-setores thead th {
+  padding: 10px 8px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.86rem;
+  color: #4b5563;
+  text-align: center;
+}
+
+.col-setor {
+  width: 34%;
+  text-align: left !important;
+}
+
+.col-usuarios,
+.col-servicos {
+  width: 12%;
+}
+
+#tabela-setores tbody td {
+  padding: 8px 8px;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 0.86rem;
+  color: #111827;
+}
+
+/* linha de root */
+.nivel-0 td {
+  font-weight: 600;
+  background: #f9fafb;
+}
+
+/* hover para indicar a linha do tooltip consolidado */
+.row-hover {
+  background: #eef2ff !important;
+}
+
+/* coluna SETOR */
+.td-setor {
+  text-align: left;
+}
+
+.td-setor-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.td-setor-nome {
+  max-width: 360px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* botão setinha */
+.toggle {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0 2px;
+}
+
+/* tooltip consolidado (ao lado do nome do setor) */
+.tooltip-consolidado {
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  transform: translate(10px, -50%);
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  padding: 10px 12px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.25);
+  min-width: 260px;
+  max-width: 320px;
+  z-index: 40;
+}
+
+.tooltip-consolidado h4 {
+  margin: 0 0 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.tooltip-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 10px;
+  font-size: 0.82rem;
+}
+
+.tooltip-grid span {
+  color: #6b7280;
+}
+
+.tooltip-grid strong {
+  color: #111827;
+}
+
+/* ============================================================
+   TOOLTIP DE USUÁRIOS (COLUNA NÚMERO DE USUÁRIOS)
+============================================================ */
+.td-usuarios {
+  text-align: center;
+  position: relative;
+}
+
+.usuarios-wrapper {
+  position: relative;
+  display: inline-flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.usuarios-quantidade {
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+}
+
+.tooltip-usuarios {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translate(110%, -50%);
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  padding: 8px 10px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.25);
+  min-width: 200px;
+  max-width: 260px;
+  z-index: 50;
+}
+
+.tooltip-usuarios ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.tooltip-usuarios li {
+  font-size: 0.82rem;
+  padding: 3px 0;
+  border-bottom: 1px dashed #e5e7eb;
+}
+
+.tooltip-usuarios li:last-child {
+  border-bottom: none;
+}
+
+.tooltip-loading {
+  font-size: 0.82rem;
+  color: #6b7280;
+}
+
+.tooltip-empty {
+  font-size: 0.82rem;
+  color: #9ca3af;
+}
+
+/* ============================================================
+   RESPONSIVO BÁSICO
+============================================================ */
+@media (max-width: 1100px) {
+  .setores-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mini-chart-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .setores-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dash-section-header-table {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .btn-toggle-all {
+    align-self: flex-end;
+  }
+}
+
+
+/* ============================================================
+   ANIMAÇÃO
+============================================================ */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+
+/* ============================================================
+   TABELA HIERÁRQUICA
+============================================================ */
+#tabela-setores {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 18px;
+  font-size: 0.92rem;
+}
+
+#tabela-setores th {
+  background: #f3f4f6;
+  padding: 12px 10px;
+  text-align: center;
+  font-size: 0.9rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+#tabela-setores td {
+  padding: 9px 10px;
+  border-bottom: 1px solid #f1f1f1;
+}
+
+#tabela-setores tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+.nivel-0 {
+  background: #eef5ff !important;
+  font-weight: 600;
+}
+
+.toggle {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.78rem;
+  margin-right: 6px;
+}
+
+/* ============================================================
+   TOOLTIP — USUÁRIOS DO SETOR
+============================================================ */
+.info-tooltip {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #374151;
+  border: none;
+  font-weight: 700;
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: .2s;
+}
+
+.info-tooltip:hover {
+  background: #d1d5db;
+}
+
+/* ============================================================
+   RESPONSIVIDADE
+============================================================ */
+@media (max-width: 1100px) {
+  .kpi-executivo-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .indicadores-container {
+    grid-template-columns: 1fr;
+  }
+
+  .ranking-chart-box {
+    height: 380px;
+  }
+}
+
+@media (max-width: 700px) {
+  .kpi-executivo-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-box,
+  .mini-chart {
+    height: 240px !important;
+  }
+}
+
+
+
+
+
+/* ============================================================
+   RESET
+============================================================ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #f3f4f6;
+  font-family: "Inter", sans-serif;
+  color: #111827;
+}
+
+.main-container {
+  max-width: 1500px;
+  margin: 30px auto;
+  padding: 0 20px;
+}
+
+/* ============================================================
+   SEÇÕES (cards brancos)
+============================================================ */
+.dash-section {
+  background: #ffffff;
+  padding: 22px 26px;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.04);
+  margin-bottom: 28px;
+}
+
+.dash-section-header h2 {
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+
+/* ============================================================
+   TABELA HIERÁRQUICA
+============================================================ */
+#tabela-setores {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.93rem;
+}
+
+#tabela-setores th {
+  background: #f3f4f6;
+  color: #374151;
+  padding: 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  border-bottom: 2px solid #e5e7eb;
+  text-align: center;
+}
+
+#tabela-setores td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f2f2f2;
+}
+
+#tabela-setores tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+.nivel-0 {
+  background: #eef5ff !important;
+  font-weight: 600;
+}
+
+/* Botão expand/recolher */
+.toggle {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  margin-right: 6px;
+  font-size: 0.8rem;
+  color: #4b5563;
+}
+
+.toggle:hover {
+  color: #1d4ed8;
+}
+
+
+/* ============================================================
+   TOOLTIP — LISTA DE USUÁRIOS
+============================================================ */
+.tooltip-usuarios-lista {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  min-width: 260px;
+  max-height: 260px;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  z-index: 99999;
+}
+
+/* scrollbar */
+.tooltip-usuarios-lista::-webkit-scrollbar {
+  width: 7px;
+}
+.tooltip-usuarios-lista::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.tooltip-usuarios-lista ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tooltip-usuarios-lista li {
+  padding: 6px 4px;
+  border-bottom: 1px dashed #ddd;
+  font-size: 0.85rem;
+}
+
+.tooltip-usuarios-lista li strong {
+  color: #111;
+}
+
+.tooltip-usuarios-lista li span {
+  display: block;
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+
+.tooltip-usuarios-lista .empty {
+  text-align: center;
+  padding: 10px;
+  border-bottom: none;
+  color: #6b7280;
+}
+
+.tooltip-loading {
+  padding: 16px 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+/* Efeito no número que abre o tooltip */
+.usuarios-hover:hover {
+  text-decoration: underline;
+  color: #2563eb;
+}
+
+
+/* ============================================================
+   RESPONSIVIDADE
+============================================================ */
+@media (max-width: 1024px) {
+  .dash-section {
+    padding: 18px 20px;
+  }
+
+  #tabela-setores th,
+  #tabela-setores td {
+    font-size: 0.85rem;
+  }
+
+  .tooltip-usuarios-lista {
+    transform: translateX(-40%);
+  }
+}
+
+@media (max-width: 650px) {
+  #tabela-setores {
+    font-size: 0.82rem;
+  }
+
+  .tooltip-usuarios-lista {
+    min-width: 220px;
+  }
+}
+
+/* COLUNA SETOR MAIS LARGA */
+#tabela-setores th:first-child,
+#tabela-setores td:first-child {
+  width: 44%;
+}
+
+/* TOOLTIP CONSOLIDADO (setor) */
+.tooltip-consolidado {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  margin-left: 10px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  padding: 12px;
+  border-radius: 10px;
+  min-width: 220px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  z-index: 99999;
+}
+
+.tooltip-consolidado h4 {
+  margin: 0 0 8px 0;
+  font-size: 0.95rem;
+  color: #111;
+}
+
+/* TOOLTIP USUÁRIOS */
+.tooltip-usuarios-lista {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  margin-left: 10px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 10px;
+  min-width: 160px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  z-index: 99999;
+}
+
+.tooltip-usuarios-lista ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tooltip-usuarios-lista li {
+  padding: 6px 0;
+  border-bottom: 1px dashed #ddd;
+}
+
+.tooltip-usuarios-lista li:last-child {
+  border-bottom: none;
+}
+
+.usuarios-hover:hover {
+  text-decoration: underline;
+  color: #2563eb;
+}
+
+
+
+
+/* =======================================================
+   RANKINGS — CARDS
+======================================================= */
+
+
+/* Botão Ver Todos */
+#btnToggleAll {
+    background: #2d6cdf;
+    color: #fff;
+    padding: 8px 18px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: .9rem;
+}
+#btnToggleAll:hover { background: #1b4fb1; }
+.btn-primary:focus-visible, .info-tooltip:focus-visible, .toggle:focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: 2px;
+}
+
+/* =======================================================
+   TABELA SETORES
+======================================================= */
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+th {
+    padding: 12px;
+    background: #f4f6f9;
+    border-bottom: 2px solid #ddd;
+    font-size: 14px;
+    color: #444;
+    position: relative;
+}
+
+tbody tr:nth-child(even) {
+    background: #fafafa;
+}
+
+td {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.nivel-0 td {
+    font-weight: bold;
+    background: #f7f9ff !important;
+}
+
+.toggle {
+    cursor: pointer;
+    margin-right: 8px;
+}
+
+.hidden-row {
+    display: none;
+}
+
+/* =======================================================
+   TOOLTIP
+======================================================= */
+
+.th-tooltip {
+    position: relative;
+}
+
+.th-tooltip .th-tooltip-text {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    background: #fff;
+    border: none;
+    padding: 10px;
+    border-radius: 6px;
+    width: 260px;
+    transform: translateY(-100%);
+    transition: opacity .2s;
+    box-shadow: 0 3px 10px rgba(0,0,0,.15);
+}
+
+.th-tooltip:hover .th-tooltip-text {
+    opacity: 1;
+    visibility: visible;
+}
+
+.info-tooltip {
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    background: #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    cursor: default;
+    font-size: .82rem;
+    border: none;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    box-shadow: none;
+}
+
+/* Cores desempenho */
+.pct-good { color: #1e9e5a; font-weight: 600; }
+.pct-medium { color: #d89c00; font-weight: 600; }
+.pct-bad { color: #c0392b; font-weight: 600; }
+
+
+/* ================================
+   TOOLTIP DO CABEÇALHO DA TABELA
+   (Texto que explica cada coluna)
+================================ */
+.th-tooltip {
+    position: relative;
+}
+
+.th-tooltip-text {
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity .25s;
+    background: #fff;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100%);
+    white-space: normal;
+    width: 200px;
+    z-index: 40;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.th-tooltip:hover .th-tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+.th-tooltip:focus .th-tooltip-text,
+.th-tooltip:focus-within .th-tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+.tooltip-title-wrapper {
+  position: relative;
+  display: inline-block;
+  cursor: help;
+  line-height: 1.25;
+}
+
+/* Tooltip multilinha */
+.tooltip-title-box {
+  display: none;
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100%);
+  background: #111827;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  max-width: 240px;
+  white-space: normal;    /* PERMITE MULTILINHA */
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  z-index: 999;
+}
+
+.tooltip-title-wrapper:hover .tooltip-title-box {
+  display: block;
+}
+/* Envólucro do tooltip no título */
+.tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: help;
+  margin-left: 6px;
+}
+
+/* Caixa do tooltip */
+.tooltip-box {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100%);
+  
+  /* 🔵 FUNDO CLARO — PROFISSIONAL */
+  background: #f9fafb; /* cinza bem claro */
+  color: #374151;       /* texto cinza-escuro */
+
+  /* 🔵 MAIS LARGO (não vai cortar o texto) */
+  max-width: 300px;
+  min-width: 200px;
+  white-space: normal;   /* quebra de linha */
+  padding: 10px 14px;
+  border-radius: 8px;
+
+  /* 🔵 Borda elegante */
+  border: 1px solid #e5e7eb;
+
+  /* 🔵 Sombra suave */
+  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: center;
+
+  z-index: 999;
+  display: none;
+}
+
+/* Mostrar tooltip ao passar o mouse */
+.tooltip-wrapper:hover .tooltip-box {
+  display: block;
+}
+.tooltip-title-box {
+  display: none;
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100%);
+
+  background: #f9fafb;
+  color: #374151;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+
+  /* 🔥 MAIS LARGO = MENOS LINHAS */
+  min-width: 260px;
+  max-width: 380px;
+
+  white-space: normal;
+  text-align: center;
+  font-size: 13\5px;
+  line-height: 1.45;
+
+  z-index: 999;
+}
+
+/* ==================================
+   TOOLTIP DOS CARDS (botão “i”)
+================================== */
+.info-tooltip {
+    position: relative;
+    cursor: pointer;
+}
+
+.info-tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 130%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #111827;
+    color: #f9fafb;
+    padding: 8px 10px;
+    font-size: .75rem;
+    border-radius: 8px;
+    line-height: 1.3;
+    width: 220px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .25s;
+    z-index: 50;
+    pointer-events: none;
+}
+/* ===============================
+   PADRÃO DOS CARDS DE KPI
+=============================== */
+
+.kpi-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 22px 18px;
+  text-align: center;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* TÍTULO */
+.kpi-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 10px;
+}
+
+/* VALOR PRINCIPAL */
+.kpi-value {
+  font-size: 26px;       /* igual para todos */
+  font-weight: 700;      /* bold */
+  color: #111827;        /* texto sempre escuro */
+  line-height: 1.2;
+  margin-top: 6px;
+}
+
+/* SUBTEXTO DA TAXA */
+.kpi-subtext {
+  font-size: 12px;
+  margin-top: 8px;
+  color: #4b5563;
+}
+.card-neutral { background: #ffffff; color: #1f2937; }
+.card-blue    { background: #dbeafe; color: #1d4ed8; }
+.card-green   { background: #dcfce7; color: #15803d; }
+.card-orange  { background: #fef3c7; color: #b45309; }
+.card-red     { background: #fee2e2; color: #b91c1c; }
+
+.info-tooltip::before {
+    content: "";
+    position: absolute;
+    bottom: 115%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px;
+    border-style: solid;
+    border-color: transparent;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .25s;
+}
+
+.info-tooltip:hover::after,
+.info-tooltip:hover::before {
+    opacity: 1;
+    visibility: visible;
+}
+.info-tooltip:focus::after,
+.info-tooltip:focus::before {
+    opacity: 1;
+    visibility: visible;
+}
+       /* Estilo do Grid interno */
+        .tooltip-consolidado h4 {
+            margin: 0 0 8px;
+            font-size: 1rem;
+            color: #111827;
+            font-weight: 700;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 4px;
+        }
+
+
+        <style>
+        /* =======================================================
+            ESTILOS GLOBAIS E ESTRUTURA (UNIÃO DE ESTILOS)
+        ========================================================== */
+
+        /* Ajuste do Body: Fundo para contraste e remoção de margem padrão */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 30px;
+            color: #222;
+            background-color: #f0f3f7;
+        }
+
+        /* Estilo do Container Principal (Box Branca Centralizada) */
+        .main-container {
+            max-width: 1500px;
+            width: 100%;
+            margin: 40px auto;
+            padding: 24px;
+            background-color: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+            border: 1px solid #e5e7eb;
+            overflow: hidden;
+        }
+/* NAV SUPERIOR AJUSTADA */
+.top-nav {
+    width: 100%;
+    background: #ffffff;
+    padding: 16px 24px;
+    border-radius: 14px;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, .06);
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* permite logo esquerda + menu centro */
+}
+
+/* LOGO */
+.top-logo {
+    height: 45px;
+    opacity: .95;
+    margin-right: 20px;
+}
+
+.top-nav-left,
+.top-nav-right {
+    width: 180px; /* cria equilíbrio visual para centralizar o menu */
+    display: flex;
+    align-items: center;
+}
+
+.top-nav-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+}
+
+/* MENU */
+.top-nav-items {
+    display: flex;
+    gap: 32px;
+}
+
+
+        .nav-item {
+            font-size: 15px;
+            color: #555;
+            text-decoration: none;
+            padding: 6px 14px;
+            border-radius: 8px;
+            transition: 0.25s;
+            white-space: nowrap;
+        }
+
+        .nav-item:hover {
+            background: #f3f7ff;
+            color: #2563eb;
+        }
+
+        .nav-item.active {
+            background: #e6f0ff;
+            color: #2563eb;
+            font-weight: 600;
+        }
+
+        /* Seção geral (Bloco de conteúdo com borda e sombra) */
+        .dash-section {
+            margin: 24px 0;
+            padding: 20px 24px;
+            border-radius: 16px;
+            background: #ffffff;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+            border: 1px solid #e5e7eb;
+        }
+
+        /* Removendo a sombra e borda quando a dash-section é usada apenas para agrupar */
+        .dash-section.no-shadow {
+            box-shadow: none;
+            border: none;
+            padding: 0;
+            margin: 0;
+            background: transparent;
+        }
+
+        /* --- TÍTULOS --- */
+        h1 {
+            color: #007bff;
+            font-size: 1.5em;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            color: #111827;
+            font-size: 1.45rem; /* Ajuste para ser o mesmo tamanho do Painel de Setores */
+            font-weight: 700;
+            margin-top: 0;
+            margin-bottom: 25px;
+        }
+
+        h3 {
+            color: #111827;
+            font-size: 1.25em;
+            font-weight: 600;
+            margin-top: 25px;
+            margin-bottom: 16px;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #e0e0e0;
+            margin: 30px 0;
+        }
+
+
+        /* =======================================================
+            FILTRO E CARDS DE CONTAGEM
+        ========================================================== */
+
+        .filter-panel {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            align-items: center;
+            padding: 15px 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background-color: #f7f9fb;
+        }
+
+        .filter-panel input,
+        .filter-panel button {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+
+        .btn-primary {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            background-color: #1d4ed8;
+        }
+
+        .card-deck {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .user-stat-card {
+            padding: 20px;
+            border: 1px solid #dcdcdc;
+            border-radius: 12px;
+            text-align: center;
+            background-color: #ffffff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s, box-shadow 0.3s;
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+
+        .user-stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-stat-card strong {
+            display: block;
+            font-size: 2.2em;
+            color: #2563eb;
+            margin-top: 5px;
+            font-weight: 700;
+        }
+
+        /* =======================================================
+            RANKING E GRÁFICOS
+        ========================================================== */
+
+        .section-content-flex {
+            display: flex;
+            gap: 40px;
+            margin-top: 30px;
+        }
+
+        .ranking-box {
+            flex: 1;
+            min-width: 45%;
+        }
+
+        .ranking-list {
+            list-style-type: none;
+            counter-reset: ranking-counter;
+            padding: 0;
+            margin-top: 10px;
+        }
+
+        .ranking-list li {
+            counter-increment: ranking-counter;
+            padding: 10px 0;
+            border-bottom: 1px dashed #eee;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            color: #111827;
+        }
+
+        .ranking-list li::before {
+            content: counter(ranking-counter);
+            font-weight: 700;
+            color: #007bff;
+            font-size: 1.2em;
+            min-width: 25px;
+            text-align: center;
+            margin-right: 15px;
+        }
+
+        .ranking-list li:nth-child(1)::before {
+            color: #f59e0b;
+        }
+
+        .ranking-list li:nth-child(2)::before {
+            color: #9ca3af;
+        }
+
+        .ranking-list li:nth-child(3)::before {
+            color: #b45309;
+        }
+
+        .chart-container {
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            background-color: #fcfcfc;
+            height: 300px;
+        }
+
+        /* =======================================================
+            TABELA
+        ========================================================== */
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .table thead th {
+            padding: 12px;
+            background-color: #e6f0ff;
+            color: #2563eb;
+            text-align: left;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border-bottom: 2px solid #b3d9ff;
+        }
+
+        .table tbody td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+            font-size: 0.95rem;
+        }
+
+        .table tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .table tbody tr:hover {
+            background-color: #f0f8ff;
+        }
+
+        .text-success {
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        .text-danger {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        
+/* ====== ajustes pequenos para visão geral, sem quebrar o padrão ====== */
+
+/* Deixa um “wide card” (economia) ocupar 2 colunas quando houver espaço */
+.kpi-card--wide { grid-column: span 2; }
+@media (max-width: 900px){ .kpi-card--wide { grid-column: auto; } }
+
+/* Destaque sutil no card de economia */
+.kpi-card--accent{
+  background: #f8fffb;
+  border-color: #ccf2de;
+}
+.kpi-card--accent strong{ color: #16a34a; }
+
+/* Subtexto em KPIs */
+.kpi__sub{
+  margin-top: 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* números com alinhamento fixo para moeda */
+.currency{ font-variant-numeric: tabular-nums; }
+/* ====== KPI Cidadãos (homens/mulheres + idade média) ====== */
+.kpi-cidadaos { position: relative; }
+
+.kpi-cidadaos strong { margin-bottom: 2px; }
+
+.kpi-people {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 6px;
+  align-items: center;
+}
+
+.kpi-people .sex {
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fafcff;
+}
+
+.sex-icon {
+  width: 20px; height: 20px;
+  fill: currentColor;
+  opacity: .9;
+}
+.sex-icon.male   { color: #2563eb; }
+.sex-icon.female { color: #ec4899; }
+
+.kpi-people .sex span {
+  color: #6b7280;
+  font-size: .85rem;
+}
+.kpi-people .sex b {
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-age {
+  margin-top: 6px;
+  text-align: center;
+  padding-top: 10px;
+  border-top: 1px dashed #e5e7eb;
+}
+.kpi-age span {
+  display: block;
+  font-size: .85rem;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+.kpi-age b {
+  font-size:.85rem;
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+}
+
+
+/* ====== DADOS DO PERÍODO ====== */
+.periodo-header{
+  display:flex;align-items:center;justify-content:space-between;margin-bottom:10px
+}
+.periodo-title{display:flex;align-items:center;gap:8px;color:#b91c1c}
+.periodo-title .dot{width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block}
+.year-select{padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#fff}
+
+.periodo-wrapper{margin-top:6px;overflow-x:auto}
+
+.periodo-table{width:100%;border-collapse:collapse;border-radius:10px;overflow:hidden}
+.periodo-table thead .top-head th{
+  background:#fff5f5;color:#b91c1c;font-weight:700;border-bottom:2px solid #fecaca;
+  padding:12px 10px;text-align:left
+}
+.periodo-table thead .sub-head th{
+  background:#fffafa;color:#b45309;border-bottom:2px solid #fee2e2;font-weight:600;padding:8px 10px
+}
+.periodo-table th,.periodo-table td{padding:10px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+.periodo-table tbody tr:nth-child(even){background:#fffdfd}
+.periodo-table tbody tr:hover{background:#fff7f7}
+.periodo-table .center{text-align:center}
+.periodo-table .right{text-align:right;font-variant-numeric:tabular-nums}
+
+.periodo-total{background:#fff5f5;font-weight:700;color:#b91c1c;border-top:2px solid #fecaca}
+.periodo-total td,.periodo-total th{padding:12px 10px}
+
+.sr-only{color:transparent}
+
+/* responsivo pequeno */
+@media (max-width: 860px){
+  .periodo-table thead .sub-head{display:none}
+}
+
+
+/* mini pílulas dentro do card de cidadãos */
+.kpi-minirow {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px dashed #e5e7eb;
+}
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 3px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+}
+.pill-m { color:#2563eb; }
+.pill-f { color:#ec4899; }
+
+.mini-note {
+  text-align: center;
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 6px;
+}
+.mini-note b {
+  display:block;
+  margin-top:2px;
+  font-size: 18px;
+  color: #111827;
+}
+
+/* alinhamento da tabela de economia */
+.ta-right { text-align: right; }
+/* ====== ajustes tabela usuários ====== */
+.tabela-usuarios-col-data { width: 130px; min-width: 130px; text-align: center; }
+.tabela-usuarios-col-numero { width: 110px; min-width: 110px; text-align: center; }
+.tabela-usuarios-col-login { width: 140px; min-width: 140px; text-align: center; }
+.tabela-usuarios-col-despacho { width: 120px; min-width: 120px; text-align: center; }
+.th-sortable-user { cursor: pointer; position: relative; user-select: none; }
+.th-sortable-user::after { content: "⇅"; font-size: 12px; color: #2563eb; position: absolute; right: 6px; opacity: .6; }
+.th-sortable-user.sort-asc::after { content: "▲"; }
+.th-sortable-user.sort-desc::after { content: "▼"; }
+.th-sortable { cursor: pointer; position: relative; user-select: none; }
+.th-sortable:hover { background-color: #dbeafe; }
+.th-sortable::after { content: "⇅"; font-size: 12px; color: #2563eb; position: absolute; right: 8px; opacity: .6; }
+/* ====== ranking gráfico de despachos ====== */
+#ranking-despachos li { display: flex; justify-content: space-between; padding: 10px 5px; border-bottom: 1px dashed #ddd; font-size: 1rem; }
+#ranking-despachos li strong { color: #2563eb; }
+.ranking-container { width: 100%; display: flex; flex-direction: column; align-items: center; margin-top: 25px; }
+.ranking-title { margin-bottom: 20px; font-weight: 600; font-size: 20px; color: #1f2937; }
+.ranking-chart-wrapper { width: 70%; max-width: 900px; min-width: 350px; height: 420px; background: #ffffff; border-radius: 14px; box-shadow: 0 4px 14px rgba(15,23,42,0.06); border: 1px solid #e5e7eb; padding: 25px; margin-bottom: 20px; }
+.ranking-filter { display: flex; gap: 15px; align-items: center; margin-bottom: 20px; }
+.ranking-filter input, .ranking-filter button { padding: 6px 10px; border-radius: 6px; border: 1px solid #d1d5db; }
+
+
+
+/* ============================================================
+   RESET + BASE
+============================================================ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #f3f4f6;
+  font-family: "Inter", Arial, sans-serif;
+  color: #111827;
+}
+
+.main-container {
+  max-width: 1500px;
+  margin: 30px auto;
+  padding: 0 20px;
+}
+
+/* ============================================================
+   SEÇÕES (cards brancos)
+============================================================ */
+.dash-section {
+  background: #ffffff;
+  padding: 22px 26px;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.04);
+  margin-bottom: 28px;
+}
+
+.dash-section-header h2 {
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+
+/* ============================================================
+   TÍTULO DA SEÇÃO (mesmo estilo da visão geral)
+============================================================ */
+.section-title-wrapper {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.section-title-main {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.section-title-sub {
+  margin-top: 4px;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+/* ============================================================
+   GRID PRINCIPAL: Gráfico Serv./Setor + Ranking Eficiência
+============================================================ */
+.indicadores-container {
+  display: grid;
+  grid-template-columns: 1fr 0.8fr;
+  gap: 22px;
+}
+
+.indicadores-left,
+.indicadores-right {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.chart-box {
+  width: 100%;
+  height: 360px;
+}
+
+.scrollable-box {
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+/* Ranking Card */
+.ranking-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.ranking-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 12px;
+}
+
+.ranking-item {
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px dashed #e5e7eb;
+}
+
+.ranking-item:last-child {
+  border-bottom: none;
+}
+
+.ranking-pos {
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.ranking-name {
+  color: #374151;
+}
+
+.ranking-value {
+  font-weight: 600;
+  color: #111827;
+}
+
+/* ============================================================
+   MINI-GRÁFICOS (Top 5)
+============================================================ */
+.mini-chart-card {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 18px 20px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e5e7eb;
+}
+
+.mini-chart-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.mini-chart-list {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mini-chart-item {
+  display: grid;
+  grid-template-columns: minmax(0, 260px) 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Nome + badge */
+.mini-chart-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mini-rank-badge {
+  min-width: 26px;
+  height: 26px;
+  background: #e5e7eb;
+  color: #374151;
+  border-radius: 999px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: .8rem;
+  font-weight: 700;
+}
+
+.mini-rank-badge.rank-1 {
+  background: #d1fae5;
+  color: #047857;
+}
+.mini-rank-badge.rank-2 {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.mini-rank-badge.rank-3 {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+/* Barra */
+.mini-chart-bar-wrapper {
+  background: #f3f4f6;
+  border-radius: 999px;
+  overflow: hidden;
+  height: 22px;
+  position: relative;
+}
+
+.mini-chart-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  font-size: .8rem;
+  font-weight: 600;
+  display: flex;
+  justify-content: flex-end;
+  padding-right: 10px;
+}
+
+/* ============================================================
+   TABELA HIERÁRQUICA — INDICADORES POR SETOR
+============================================================ */
+#tabela-setores {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 18px;
+  table-layout: fixed;
+  font-size: 0.92rem;
+}
+
+#tabela-setores thead th {
+  background: #f3f4f6;
+  padding: 12px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+#tabela-setores tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1f1f1;
+  color: #111827;
+}
+
+/* Linhas raiz */
+.nivel-0 {
+  background: #eef5ff !important;
+  font-weight: 600;
+}
+
+/* Toggle botão */
+.toggle {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  margin-right: 6px;
+  font-size: 0.8rem;
+  color: #4b5563;
+}
+
+.toggle:hover {
+  color: #1d4ed8;
+}
+
+/* Nome */
+.td-setor-inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.td-setor-nome {
+  max-width: 360px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================================
+   TOOLTIP CONSOLIDADO (indicadores do setor)
+============================================================ */
+.tooltip-consolidado {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  margin-left: 10px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px;
+  min-width: 220px;
+  max-width: 300px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+  z-index: 1000;
+}
+
+.tooltip-consolidado h4 {
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #111;
+}
+
+/* grade interna */
+.tooltip-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 10px;
+  font-size: 0.82rem;
+}
+
+.tooltip-grid span {
+  color: #6b7280;
+}
+
+.tooltip-grid strong {
+  color: #111827;
+}
+
+/* ============================================================
+   TOOLTIP USUÁRIOS (coluna de usuários)
+============================================================ */
+.tooltip-usuarios-lista {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  margin-left: 10px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 10px;
+  min-width: 180px;
+  max-height: 260px;
+  overflow-y: auto;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+  z-index: 1000;
+}
+
+.tooltip-usuarios-lista li {
+  padding: 6px 0;
+  border-bottom: 1px dashed #ddd;
+  font-size: 0.82rem;
+}
+
+.tooltip-usuarios-lista li:last-child {
+  border-bottom: none;
+}
+
+.usuarios-hover:hover {
+  text-decoration: underline;
+  color: #2563eb;
+}
+
+/* ============================================================
+   RESPONSIVO
+============================================================ */
+@media (max-width: 1100px) {
+  .indicadores-container {
+    grid-template-columns: 1fr;
+  }
+
+  .mini-chart-item {
+    grid-template-columns: 1fr;
+  }
+
+  #tabela-setores th,
+  #tabela-setores td {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 700px) {
+  .chart-box {
+    height: 260px !important;
+  }
+}

@@ -11,6 +11,6 @@
     "lib": ["DOM", "ES2020"],
     "baseUrl": "."
   },
-  "include": ["src"]
+  "include": ["src", "app.js"]
 }
 

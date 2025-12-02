@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Header from "../components/Header";
+// import SectionTitle from "../components/SectionTitle"; // não usar o global aqui
 import { API_BASE_URL } from "../app";
 import Chart from "chart.js/auto";
+import TitleWithTooltip from "../components/TitleWithTooltip";
 
 /* ============================================================
    UTIL: contador animado para KPIs
@@ -11,9 +13,10 @@ function useCountUp(value: number | undefined, duration = 800) {
 
   useEffect(() => {
     if (value == null) return;
+
     const start = 0;
     const end = Number(value);
-    const stepTime = 16;
+    const stepTime = 16; // ~60fps
     const totalSteps = duration / stepTime;
     let currentStep = 0;
 
@@ -34,6 +37,76 @@ function useCountUp(value: number | undefined, duration = 800) {
   return display;
 }
 
+export function formatarTempo(minutosTotais: number | null | undefined): string {
+  if (!minutosTotais || minutosTotais < 1) return "0 minutos";
+
+  const dias = Math.floor(minutosTotais / 1440);     // 1440 = 24 * 60
+  const horas = Math.floor((minutosTotais % 1440) / 60);
+  const minutos = Math.floor(minutosTotais % 60);
+
+  // --- Caso: só minutos (< 60)
+  if (minutosTotais < 60) {
+    return `${minutosTotais} minuto${minutosTotais === 1 ? "" : "s"}`;
+  }
+
+  // --- Caso: menos de 1 dia (horas + minutos)
+  if (dias === 0) {
+    if (minutos === 0)
+      return `${horas}h`;
+    return `${horas}h e ${minutos} minuto${minutos === 1 ? "" : "s"}`;
+  }
+
+  // --- Caso: dias + horas (minutos não aparecem)
+  return `${dias} dia${dias > 1 ? "s" : ""} e ${horas}h`;
+}
+
+
+type Periodo = 
+  | "today" 
+  | "7d" 
+  | "30d" 
+  | "90d" 
+  | "6m" 
+  | "1y" 
+  | "all"
+  | "ano_passado";
+
+
+
+
+/* ============================================================
+   REGRAS DE COR DOS CARDS
+============================================================ */
+function getMediaClass(media: number) {
+  // Média diária: azul por padrão, vermelho se passar de 25
+  if (media > 25) return "card-red";
+  return "card-blue";
+}
+
+function getTaxaClass(taxa: number) {
+  // Taxa de resolução: >=70 verde, 45–69 laranja, <45 vermelho
+  if (taxa >= 70) return "card-green";
+  if (taxa >= 45) return "card-orange";
+  return "card-red";
+}
+
+function getTaxaRespostaClass(p: number) {
+  // Mesma lógica da taxa de resolução
+  if (p >= 70) return "card-green";
+  if (p >= 45) return "card-orange";
+  return "card-red";
+}
+
+function getTempoClass(dias: number) {
+  // Tempo médio: <=15 verde, 16–45 laranja, >45 vermelho
+  if (dias <= 15) return "card-green";
+  if (dias <= 45) return "card-orange";
+  return "card-red";
+}
+
+
+
+
 /* ============================================================
    TIPAGENS
 ============================================================ */
@@ -53,10 +126,8 @@ type EconomometroData = {
   dinheiro: string;
 };
 
-type Periodo = "today" | "7d" | "30d" | "90d" | "6m" | "1y" | "all";
-
 /* ============================================================
-   COMPONENTE DE TÍTULO PADRÃO
+   COMPONENTE DE TÍTULO PADRÃO (usa o CSS .section-title*)
 ============================================================ */
 type SectionTitleProps = {
   title: string;
@@ -66,36 +137,17 @@ type SectionTitleProps = {
 
 const SectionTitle = ({ title, subtitle, infoTooltip }: SectionTitleProps) => {
   return (
-    <header style={{ textAlign: "center", marginBottom: 16 }}>
-      <h2
-        style={{
-          margin: 0,
-          fontSize: "1.05rem",
-          fontWeight: 600,
-          color: "#111827",
-        }}
-      >
+    <header className="section-title">
+      <h2 className="section-title-main">
         {title}
         {infoTooltip && (
-          <span
-            title={infoTooltip}
-            style={{ fontSize: 12, marginLeft: 6, cursor: "help" }}
-          >
+          <span className="section-title-info" title={infoTooltip}>
             ℹ️
           </span>
         )}
       </h2>
-      {subtitle && (
-        <p
-          style={{
-            margin: "4px 0 0",
-            color: "#6b7280",
-            fontSize: 12,
-          }}
-        >
-          {subtitle}
-        </p>
-      )}
+
+      {subtitle && <p className="section-title-sub">{subtitle}</p>}
     </header>
   );
 };
@@ -131,16 +183,13 @@ export default function Visaogeral() {
   const miniSectorsRef = useRef<HTMLCanvasElement | null>(null);
   const miniSectorsChartRef = useRef<Chart | null>(null);
 
-  const miniResolutionRef = useRef<HTMLCanvasElement | null>(null);
-  const miniResolutionChartRef = useRef<Chart | null>(null);
-
-  // ✅ NOVO — gráfico empilhado
   const stackedStatusRef = useRef<HTMLCanvasElement | null>(null);
   const stackedStatusChartRef = useRef<Chart | null>(null);
 
   /** ----------------- ESTADOS GERAIS ----------------- */
   const [anos, setAnos] = useState<number[]>([]);
   const [anoSel, setAnoSel] = useState<number>(new Date().getFullYear());
+
   const [economiaResumo, setEconomiaResumo] = useState<EconomiaResumoRow[]>([]);
   const [economiaTotalAno, setEconomiaTotalAno] = useState<number>(0);
 
@@ -151,20 +200,23 @@ export default function Visaogeral() {
 
   const [periodoIndicadores, setPeriodoIndicadores] =
     useState<Periodo>("7d");
-  const [taxaResolucaoMedia, setTaxaResolucaoMedia] = useState<number | null>(
-    null
-  );
 
-  // ✅ NOVO — guarda valores detalhados para o stacked
-  const [taxaDetalhada, setTaxaDetalhada] = useState<{
-    abertas: number;
-    andamento: number;
-    concluidas: number;
-    respondidas: number;
-    total: number;
-  } | null>(null);
+const [taxaResolucaoCaixa, setTaxaResolucaoCaixa] = useState<{
+  iniciadas: number;
+  resolvidas: number;
+  respondidas: number;
+  taxa_respostas: number;
+  taxa_resolucao: number;
+  tempo_medio_conclusao_min: number;
+} | null>(null);
 
-  /** ----------------- KPIs ----------------- */
+ 
+  const [indicadoresExtra, setIndicadoresExtra] = useState({
+    mediaPorDia: 0,
+     diasPeriodo: 0, // <-- NECESS  ÁRIO
+  });
+
+  /** ----------------- KPIs (contadores globais) ----------------- */
   const [kpis, setKpis] = useState<{
     total_servicos?: number;
     total_usuarios?: number;
@@ -173,39 +225,30 @@ export default function Visaogeral() {
     eficiencia_pct?: number;
     qualidade_media?: number;
   }>({});
+
   const countServicos = useCountUp(kpis.total_servicos);
   const countUsuarios = useCountUp(kpis.total_usuarios);
   const countCidadaos = useCountUp(kpis.total_cidadaos);
   const countSetores = useCountUp(kpis.total_setores);
 
-  const [cidadaosResumo, setCidadaosResumo] = useState<{
-    homens?: number;
-    mulheres?: number;
-    idade_media?: number;
-  }>({});
-
+  /** ----------------- ANOS DISPONÍVEIS ----------------- */
   useEffect(() => {
     const y = new Date().getFullYear();
     setAnos([y, y - 1, y - 2, y - 3, y - 4]);
   }, []);
 
-  /** ----------------- CONTADORES + CIDADÃOS ----------------- */
+  /** ----------------- CARREGAR CONTADORES ----------------- */
   useEffect(() => {
     async function carregarContadores() {
       const r = await fetch(`${API_BASE_URL}/visao-geral/contadores`);
       const k = await r.json();
       setKpis(k || {});
     }
-    async function carregarCidadaos() {
-      const r = await fetch(`${API_BASE_URL}/visao-geral/cidadaos-resumo`);
-      const c = await r.json();
-      setCidadaosResumo(c || {});
-    }
+
     carregarContadores();
-    carregarCidadaos();
   }, []);
 
-  /** ----------------- GRÁFICO EVOLUÇÃO ----------------- */
+  /** ----------------- GRÁFICO: EVOLUÇÃO DE USO ----------------- */
   useEffect(() => {
     async function evolucao() {
       const r = await fetch(`${API_BASE_URL}/visao-geral/evolucao-uso`);
@@ -264,11 +307,90 @@ export default function Visaogeral() {
         },
       });
     }
+
     evolucao();
     return () => {
       if (evolucaoChartRef.current) evolucaoChartRef.current.destroy();
     };
   }, []);
+
+  // /** ----------------- GRÁFICO: PERFIL (SERVIDORES x CIDADÃOS x REPRESENTANTES) ----------------- */
+  // useEffect(() => {
+  //   async function perfis() {
+  //     const r = await fetch(`${API_BASE_URL}/visao-geral/contadores`);
+  //     const k = await r.json();
+  //     if (!perfilRef.current) return;
+
+  //     const servidores = Number(k.total_usuarios || 0);
+  //     const cidadaos = Number(k.total_cidadaos || 0);
+  //     const representantes = 45000; // mock temporário
+
+  //     const raw = [servidores, cidadaos, representantes];
+  //     const display = raw.map((v) => Math.sqrt(Math.max(1, v)));
+
+  //     if (perfilChartRef.current) perfilChartRef.current.destroy();
+
+  //     perfilChartRef.current = new Chart(perfilRef.current, {
+  //       type: "doughnut",
+  //       data: {
+  //         labels: ["Servidores", "Cidadãos", "Representantes"],
+  //         datasets: [
+  //           {
+  //             data: display,
+  //             backgroundColor: ["#2563eb", "#60a5fa", "#93c5fd"],
+  //             borderColor: "#ffffff",
+  //             borderWidth: 2,
+  //             offset: display.map((_, i) => (i === 0 ? 8 : 0)),
+  //             hoverOffset: 10,
+  //           },
+  //         ],
+  //       },
+  //       options: {
+  //         responsive: true,
+  //         maintainAspectRatio: false,
+  //         cutout: "45%",
+  //         plugins: {
+  //           legend: { position: "bottom" },
+  //           tooltip: {
+  //             callbacks: {
+  //               label: (ctx: any) => {
+  //                 const idx = ctx.dataIndex ?? 0;
+  //                 const val = raw[idx] ?? 0;
+  //                 return `${ctx.label}: ${fmt.format(Number(val || 0))}`;
+  //               },
+  //             },
+  //           },
+  //         },
+  //       },
+  //     });
+  //   }
+
+  //   perfis();
+  //   return () => {
+  //     if (perfilChartRef.current) perfilChartRef.current.destroy();
+  //   };
+  // }, [fmt]);
+
+  /** ----------------- ECONÔMETRO ----------------- */
+  useEffect(() => {
+    async function carregarEconomometro() {
+      const r = await fetch(
+        `${API_BASE_URL}/economometro?periodo=${ecoPeriodo}`
+      );
+      const data = await r.json();
+
+      const folhas = Number(data.folhas || 0);
+      const arvores = String(data.arvores || "0.000");
+      const dinheiro = String(data.dinheiro || "0.00");
+
+      setEconomometro({
+        folhas: Math.round(folhas),
+        arvores,
+        dinheiro,
+      });
+    }
+    carregarEconomometro();
+  }, [ecoPeriodo]);
 
   /** ----------------- GRÁFICO TOP 5 BAIRROS ----------------- */
   useEffect(() => {
@@ -280,10 +402,12 @@ export default function Visaogeral() {
         if (!topBairrosRef.current) return;
         if (topBairrosChartRef.current) topBairrosChartRef.current.destroy();
 
+        // manter só 5 bairros
         const listaBairros: string[] = (bairros || [])
           .slice(0, 5)
           .map((b: any) => b.bairro);
 
+        // meses 1..12 fixos
         const mesesFixos = Array.from({ length: 12 }, (_, i) => i + 1);
 
         const labels = mesesFixos.map((m) => {
@@ -298,31 +422,31 @@ export default function Visaogeral() {
         const datasets =
           listaBairros.length > 0
             ? listaBairros.map((bairro, idx) => {
-                const data = mesesFixos.map((m) => {
-                  const row = (meses || []).find(
-                    (r: any) => r.bairro === bairro && r.mes === m
-                  );
-                  return row ? Number(row.total || 0) : 0;
-                });
+              const data = mesesFixos.map((m) => {
+                const row = (meses || []).find(
+                  (r: any) => r.bairro === bairro && r.mes === m
+                );
+                return row ? Number(row.total || 0) : 0;
+              });
 
-                return {
-                  label: bairro,
-                  data,
-                  borderColor: cores[idx],
-                  backgroundColor: "transparent",
-                  borderWidth: 2,
-                  pointRadius: 3,
-                  tension: 0.25,
-                };
-              })
+              return {
+                label: bairro,
+                data,
+                borderColor: cores[idx],
+                backgroundColor: "transparent",
+                borderWidth: 2,
+                pointRadius: 3,
+                tension: 0.25,
+              };
+            })
             : [
-                {
-                  label: "Sem dados",
-                  data: new Array(labels.length).fill(0),
-                  borderColor: "#9ca3af",
-                  backgroundColor: "transparent",
-                },
-              ];
+              {
+                label: "Sem dados",
+                data: new Array(labels.length).fill(0),
+                borderColor: "#9ca3af",
+                backgroundColor: "transparent",
+              },
+            ];
 
         topBairrosChartRef.current = new Chart(topBairrosRef.current, {
           type: "line",
@@ -348,33 +472,67 @@ export default function Visaogeral() {
     };
   }, []);
 
-  /** ----------------- INDICADORES POR PERÍODO ----------------- */
-  useEffect(() => {
-    async function carregarIndicadores() {
-      const [rServ, rSet, rTaxa] = await Promise.all([
-        fetch(
-          `${API_BASE_URL}/indicadores/servicos-top5?periodo=${periodoIndicadores}`
-        ),
-        fetch(
-          `${API_BASE_URL}/indicadores/setores-top5?periodo=${periodoIndicadores}`
-        ),
-        fetch(
-          `${API_BASE_URL}/indicadores/taxa-resolucao?periodo=${periodoIndicadores}`
-        ),
+/** ----------------- INDICADORES POR PERÍODO (UNIFICADO) ----------------- */
+useEffect(() => {
+  async function carregarIndicadores() {
+    try {
+      const [
+        rServ,
+        rSet,
+        rTaxaResolucao,
+      ] = await Promise.all([
+        fetch(`${API_BASE_URL}/indicadores-periodo/servicos?period=${periodoIndicadores}`),
+        fetch(`${API_BASE_URL}/indicadores-periodo/setores?period=${periodoIndicadores}`),
+        fetch(`${API_BASE_URL}/indicadores/taxa-resolucao?periodo=${periodoIndicadores}`),
       ]);
 
-      const [servicos, setores, taxa] = await Promise.all([
-        rServ.json(),
-        rSet.json(),
-        rTaxa.json(),
-      ]);
+      const servicos = await rServ.json();
+      const setores = await rSet.json();
+      const taxa = await rTaxaResolucao.json();
 
-      /** Mini gráfico serviços */
+      // ================================
+      // DIAS DO PERÍODO
+      // ================================
+      const inicio = new Date(taxa.inicio);
+      const fim = new Date(taxa.fim);
+
+      const diasPeriodo = Math.max(
+        1,
+        Math.floor((fim.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)) + 1
+      );
+
+      // ================================
+      // SALVAR TAXAS E TEMPOS
+      // (agora recebidos EM MINUTOS do backend)
+      // ================================
+   setTaxaResolucaoCaixa({
+  iniciadas: taxa.iniciadas,
+  resolvidas: taxa.resolvidas,
+  respondidas: taxa.respondidas,
+
+  taxa_respostas: taxa.taxa_respostas,
+  taxa_resolucao: taxa.taxa_resolucao,
+
+  tempo_medio_conclusao_min: taxa.tempo_medio_conclusao_min,
+});
+
+
+      // ================================
+      // MÉDIA DIÁRIA
+      // ================================
+      setIndicadoresExtra({
+        mediaPorDia: Number(taxa.media_diaria || 0),
+        diasPeriodo,
+      });
+
+      // ================================
+      // GRÁFICO SERVIÇOS
+      // ================================
       if (miniServicesRef.current) {
         if (miniServicesChartRef.current)
           miniServicesChartRef.current.destroy();
 
-        const labels = servicos.map((s: any) => s.servico || "—");
+        const labels = servicos.map((s: any) => s.service_name || "—");
         const valores = servicos.map((s: any) => Number(s.total || 0));
 
         miniServicesChartRef.current = new Chart(miniServicesRef.current, {
@@ -394,20 +552,20 @@ export default function Visaogeral() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
-            scales: {
-              x: { beginAtZero: true },
-              y: { ticks: { autoSkip: false, maxRotation: 0, minRotation: 0 } },
-            },
           },
         });
       }
 
-      /** Mini gráfico setores */
+      // ================================
+      // GRÁFICO SETORES
+      // ================================
       if (miniSectorsRef.current) {
-        if (miniSectorsChartRef.current) miniSectorsChartRef.current.destroy();
+        if (miniSectorsChartRef.current)
+          miniSectorsChartRef.current.destroy();
 
-        const labels = setores.map((s: any) => s.setor || "—");
+        const labels = setores.map((s: any) => s.sector_name || "—");
         const valores = setores.map((s: any) => Number(s.total || 0));
+
         miniSectorsChartRef.current = new Chart(miniSectorsRef.current, {
           type: "bar",
           data: {
@@ -425,204 +583,45 @@ export default function Visaogeral() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
-            scales: {
-              x: { beginAtZero: true },
-              y: { ticks: { autoSkip: false, maxRotation: 0, minRotation: 0 } },
-            },
           },
         });
       }
 
-      /** Mini gráfico taxa de resolução */
-      if (miniResolutionRef.current) {
-        if (miniResolutionChartRef.current)
-          miniResolutionChartRef.current.destroy();
-
-        const abertas = Number(taxa?.abertas || 0);
-        const andamento = Number(taxa?.andamento || 0);
-        const concluidas = Number(taxa?.concluidas || 0);
-        const respondidas = Number(taxa?.respondidas || 0);
-
-        const total = abertas + andamento + concluidas + respondidas;
-        const media = total > 0 ? (concluidas / total) * 100 : 0;
-        setTaxaResolucaoMedia(media);
-
-        // ✅ guarda valores detalhados para o stacked
-        setTaxaDetalhada({
-          abertas,
-          andamento,
-          concluidas,
-          respondidas,
-          total,
-        });
-
-        const labels = ["Abertas", "Em andamento", "Concluídas", "Respondidas"];
-        const valores = [abertas, andamento, concluidas, respondidas];
-
-        miniResolutionChartRef.current = new Chart(miniResolutionRef.current, {
-          type: "doughnut",
-          data: {
-            labels,
-            datasets: [
-              {
-                data: valores,
-                backgroundColor: ["#f59e0b", "#60a5fa", "#10b981", "#93c5fd"],
-                borderColor: "#ffffff",
-                borderWidth: 2,
-              },
-            ],
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { position: "bottom" } },
-          },
-        });
-      }
+    } catch (err) {
+      console.error("Erro carregarIndicadores:", err);
     }
+  }
 
-    carregarIndicadores();
+  carregarIndicadores();
 
-    return () => {
-      if (miniServicesChartRef.current) miniServicesChartRef.current.destroy();
-      if (miniSectorsChartRef.current) miniSectorsChartRef.current.destroy();
-      if (miniResolutionChartRef.current)
-        miniResolutionChartRef.current.destroy();
-    };
-  }, [periodoIndicadores]);
+  return () => {
+    if (miniServicesChartRef.current)
+      miniServicesChartRef.current.destroy();
+    if (miniSectorsChartRef.current)
+      miniSectorsChartRef.current.destroy();
+  };
+}, [periodoIndicadores]);
 
-  /** ✅ NOVO — GRÁFICO EMPILHADO */
+
+  /** ----------------- RESUMO POR PERÍODO / ANO ----------------- */
   useEffect(() => {
-if (!stackedStatusRef.current) return;
-if (!taxaDetalhada) return;
-
-    const { abertas, andamento, concluidas, respondidas, total } =
-      taxaDetalhada;
-
-    const pct = (v: number) =>
-      total > 0 ? Number(((v / total) * 100).toFixed(1)) : 0;
-
-    const valueLabelsPlugin = {
-      id: "valueLabels",
-      afterDatasetsDraw(chart: any) {
-        const { ctx } = chart;
-        const datasets = chart.data.datasets || [];
-
-        ctx.save();
-        datasets.forEach((dataset: any, datasetIndex: number) => {
-          const meta = chart.getDatasetMeta(datasetIndex);
-          if (!meta || !meta.data || !meta.data[0]) return;
-
-          const bar = meta.data[0];
-          const props = bar.getProps(["x", "y"], true);
-          const value = dataset.data[0] as number;
-          if (!value || value < 5) return;
-
-          ctx.font = "12px system-ui";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-
-          ctx.fillStyle =
-            dataset.label === "Concluídas" ? "#ffffff" : "#111827";
-
-          ctx.fillText(`${value.toFixed(1)}%`, props.x, props.y);
-        });
-        ctx.restore();
-      },
-    };
-if (stackedStatusChartRef.current) {
-  stackedStatusChartRef.current.destroy();
-}
-
-const ctx = stackedStatusRef.current.getContext("2d");
-if (!ctx) return;
-
-stackedStatusChartRef.current = new Chart(ctx, {
-
-      type: "bar",
-      data: {
-        labels: [""],
-        datasets: [
-          {
-            label: "Iniciadas",
-            data: [pct(abertas)],
-            backgroundColor: "#CCFCE3",
-            borderColor: "#ffffff",
-            borderWidth: 1,
-          },
-          {
-            label: "Em espera",
-            data: [pct(andamento)],
-            backgroundColor: "#FFEFC2",
-            borderColor: "#ffffff",
-            borderWidth: 1,
-          },
-          {
-            label: "Respondidas",
-            data: [pct(respondidas)],
-            backgroundColor: "#CFE4FF",
-            borderColor: "#ffffff",
-            borderWidth: 1,
-          },
-          {
-            label: "Concluídas",
-            data: [pct(concluidas)],
-            backgroundColor: "#1B7F52",
-            borderColor: "#ffffff",
-            borderWidth: 1,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        indexAxis: "y",
-        plugins: {
-          legend: { position: "bottom" },
-          tooltip: {
-            callbacks: {
-              label: (ctx: any) => `${ctx.dataset.label}: ${ctx.parsed.x}%`,
-            },
-          },
-        },
-        scales: {
-          x: {
-            min: 0,
-            max: 100,
-            stacked: true,
-            ticks: { callback: (v: any) => `${v}%` },
-          },
-          y: { stacked: true, grid: { display: false } },
-        },
-      },
-      plugins: [valueLabelsPlugin as any],
-    });
-
-    return () => {
-      if (stackedStatusChartRef.current) {
-        stackedStatusChartRef.current.destroy();
-      }
-    };
-  }, [taxaDetalhada]);
-
-  /** ----------------- RESUMO POR ANO ----------------- */
-  useEffect(() => {
-    async function carregarResumoAno() {
-      const r = await fetch(`${API_BASE_URL}/resumo-periodo?ano=${anoSel}`);
-      const rows: EconomiaResumoRow[] = await r.json();
-
-      setEconomiaResumo(rows || []);
-
-      const totalEco = rows.reduce(
-        (sum, row) => sum + Number(row.economia_gerada || 0),
-        0
+    async function carregarResumoPeriodo() {
+      const r = await fetch(
+        `${API_BASE_URL}/resumo-periodo?periodo=${periodoIndicadores}&ano=${anoSel}`
       );
-      setEconomiaTotalAno(totalEco);
-    }
-    carregarResumoAno();
-  }, [anoSel]);
+      const data = await r.json();
 
-  /** ----------------- DERIVADOS ----------------- */
+      setEconomiaResumo(Array.isArray(data) ? data : data.meses || []);
+      setEconomiaTotalAno(Number(data.total?.dinheiro || 0));
+    }
+
+    carregarResumoPeriodo();
+  }, [anoSel, periodoIndicadores]);
+
+
+
+
+  /** ----------------- DERIVADOS PARA RENDERIZAÇÃO ----------------- */
   const eficienciaFmt =
     kpis.eficiencia_pct != null
       ? `${Number(kpis.eficiencia_pct).toFixed(1)}%`
@@ -632,9 +631,6 @@ stackedStatusChartRef.current = new Chart(ctx, {
     kpis.qualidade_media != null && Number(kpis.qualidade_media) > 0
       ? Number(kpis.qualidade_media).toFixed(2)
       : "—";
-
-  const taxaResolucaoMediaFmt =
-    taxaResolucaoMedia != null ? `${taxaResolucaoMedia.toFixed(1)}%` : "--%";
 
   /** ----------------- RENDER ----------------- */
   return (
@@ -650,7 +646,7 @@ stackedStatusChartRef.current = new Chart(ctx, {
       </section>
 
       {/* KPIs PRINCIPAIS */}
-      <section className="dash-section">
+      <section className="dash-section" aria-labelledby="kpi-title">
         <SectionTitle
           title="Indicadores principais"
           subtitle="Indicadores gerais de serviços, usuários, cidadãos e setores"
@@ -658,6 +654,7 @@ stackedStatusChartRef.current = new Chart(ctx, {
 
         <div
           className="card-deck"
+          id="vg-kpis"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(6, 1fr)",
@@ -667,32 +664,40 @@ stackedStatusChartRef.current = new Chart(ctx, {
         >
           <div className="user-stat-card">
             Eficiência média
-            <strong>{eficienciaFmt}</strong>
+            <strong id="vg-eficiencia">{eficienciaFmt}</strong>
           </div>
 
           <div className="user-stat-card">
             Qualidade média
-            <strong>{qualidadeFmt}</strong>
+            <strong id="vg-qualidade">{qualidadeFmt}</strong>
           </div>
 
           <div className="user-stat-card">
             Serviços cadastrados
-            <strong>{fmt.format(countServicos || 0)}</strong>
+            <strong id="vg-servicos">
+              {fmt.format(countServicos || 0)}
+            </strong>
           </div>
 
           <div className="user-stat-card">
             Usuários (servidores)
-            <strong>{fmt.format(countUsuarios || 0)}</strong>
+            <strong id="vg-usuarios">
+              {fmt.format(countUsuarios || 0)}
+            </strong>
           </div>
 
           <div className="user-stat-card kpi-cidadaos">
             Cidadãos (contas)
-            <strong>{fmt.format(countCidadaos || 0)}</strong>
+            <strong id="vg-cidadaos-total">
+              {fmt.format(countCidadaos || 0)}
+            </strong>
           </div>
 
           <div className="user-stat-card">
             Setores
-            <strong>{fmt.format(countSetores || 0)}</strong>
+            <strong id="vg-setores">
+              {fmt.format(countSetores || 0)}
+            </strong>
           </div>
         </div>
       </section>
@@ -702,7 +707,6 @@ stackedStatusChartRef.current = new Chart(ctx, {
         <SectionTitle
           title="🌱 Economômetro"
           subtitle="Impacto ambiental e financeiro gerado pelo uso do sistema"
-          infoTooltip="Cálculo baseado em economia média por solicitação e tramitação digital."
         />
 
         <div className="economometro-grid">
@@ -725,7 +729,14 @@ stackedStatusChartRef.current = new Chart(ctx, {
           </div>
 
           <div className="eco-card">
-            <div className="eco-icon">💰</div>
+            <div
+              className="eco-icon"
+              title="A economia financeira é calculada multiplicando o total de folhas economizadas pelo custo médio de R$ 0,35 por página impressa."
+              style={{ cursor: "help" }}
+            >
+              💰
+            </div>
+
             <h3 className="eco-title">Economia Financeira</h3>
             <div className="eco-value">
               {economometro
@@ -736,6 +747,7 @@ stackedStatusChartRef.current = new Chart(ctx, {
           </div>
         </div>
 
+        {/* seletor de período alinhado à direita, logo abaixo dos cards */}
         <div
           style={{
             marginTop: 12,
@@ -744,6 +756,7 @@ stackedStatusChartRef.current = new Chart(ctx, {
           }}
         >
           <select
+            id="eco-periodo-select"
             className="eco-select"
             value={ecoPeriodo}
             onChange={(e) => setEcoPeriodo(e.target.value)}
@@ -757,156 +770,209 @@ stackedStatusChartRef.current = new Chart(ctx, {
         </div>
       </section>
 
-      {/* EVOLUÇÃO + BAIRROS */}
+      {/* GRÁFICOS PRINCIPAIS: EVOLUÇÃO + BAIRROS */}
       <section className="dash-section" style={{ marginTop: 4 }}>
         <SectionTitle
           title="Indicadores mensais de uso e origem das solicitações"
           subtitle="Evolução do volume total de demanda e participação dos bairros ao longo dos meses"
         />
 
-        <div style={{ display: "flex", gap: 16 }}>
-          <div style={{ flex: 1 }}>
+        <div
+          className="section-content-flex"
+          style={{ display: "flex", gap: 16 }}
+        >
+          <div className="ranking-box" style={{ flex: 1 }}>
             <h3 className="chart-title">Evolução de uso (últimos 12 meses)</h3>
-            <p className="chart-subtitle">Volume mensal de solicitações/processos</p>
-            <div className="chart-container" style={{ height: 330 }}>
+            <p className="chart-subtitle">
+              Volume mensal de solicitações/processos
+            </p>
+            <div className="chart-container" style={{ height: 380 }}>
               <canvas ref={evolucaoRef}></canvas>
             </div>
           </div>
 
-          <div style={{ flex: 1 }}>
+          <div className="ranking-box" style={{ flex: 1 }}>
             <h3 className="chart-title">Bairros que mais solicitam</h3>
             <p className="chart-subtitle">Evolução mensal por bairro</p>
-            <div className="chart-container" style={{ height: 330 }}>
+            <div className="chart-container" style={{ height: 380 }}>
               <canvas ref={topBairrosRef}></canvas>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ✅ NOVA SEÇÃO ATUALIZADA */}
+      {/* INDICADORES POR PERÍODO */}
       <section className="dash-section dash-period-indicators">
         <div style={{ textAlign: "center", marginBottom: 12 }}>
           <SectionTitle
             title="Indicadores por Período"
-            subtitle="Serviços e setores mais demandados no intervalo selecionado"
+            subtitle="Serviços, setores e desempenho operacional dentro do intervalo selecionado"
           />
-
-          <div
-            className="period-filter"
-            style={{
-              marginTop: 8,
-              display: "flex",
-              justifyContent: "center",
-              flexWrap: "wrap",
-              gap: 6,
-            }}
-          >
-            {[
-              { label: "Hoje", value: "today" },
-              { label: "Últimos 7 dias", value: "7d" },
-              { label: "Últimos 30 dias", value: "30d" },
-              { label: "Últimos 90 dias", value: "90d" },
-              { label: "Últimos 6 meses", value: "6m" },
-              { label: "Último ano", value: "1y" },
-              { label: "Todo período", value: "all" },
-            ].map((p) => (
-              <button
-                key={p.value}
-                className={`period-btn ${
-                  periodoIndicadores === p.value ? "active" : ""
-                }`}
-                onClick={() => setPeriodoIndicadores(p.value as Periodo)}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
         </div>
 
-        {/* SERVIÇOS + SETORES */}
+        {/* BOTÕES DE PERÍODO */}
+        <div
+          className="period-filter"
+          style={{
+            marginTop: 8,
+            display: "flex",
+            justifyContent: "center",
+            flexWrap: "wrap",
+            gap: 6,
+          }}
+        >
+          {[
+            { label: "Hoje", value: "today" },
+            { label: "Últimos 7 dias", value: "7d" },
+            { label: "Últimos 30 dias", value: "30d" },
+            { label: "Últimos 90 dias", value: "90d" },
+            { label: "Últimos 6 meses", value: "6m" },
+            { label: "Este ano", value: "1y" },
+            { label: "Ano passado", value: "ano_passado" },
+            { label: "Todo período", value: "all" },
+          ].map((p) => (
+            <button
+              key={p.value}
+              className={`period-btn ${periodoIndicadores === p.value ? "active" : ""
+                }`}
+              onClick={() => setPeriodoIndicadores(p.value as Periodo)}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        {/* DOIS GRÁFICOS LADO A LADO */}
         <div
           style={{
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
             gap: 16,
             width: "100%",
-            marginTop: 20,
+            marginTop: 30,
           }}
         >
-          <article className="period-card" style={{ height: 340 }}>
-            <header>
+          {/* SERVIÇOS */}
+          <article className="period-card">
+            <header className="period-card-header">
               <h3>Serviços mais solicitados</h3>
-              <span>Top 5 por volume</span>
+              <span className="period-card-subtitle">Top 5 por volume</span>
             </header>
             <div className="period-card-body">
-              <div style={{ height: "100%" }}>
+              <div className="mini-chart-wrapper" style={{ height: 260 }}>
                 <canvas ref={miniServicesRef}></canvas>
               </div>
             </div>
           </article>
 
-          <article className="period-card" style={{ height: 340 }}>
-            <header>
+          {/* SETORES */}
+          <article className="period-card">
+            <header className="period-card-header">
               <h3>Setores mais solicitados</h3>
-              <span>Top 5 por volume</span>
+              <span className="period-card-subtitle">Top 5 por volume</span>
             </header>
             <div className="period-card-body">
-              <div style={{ height: "100%" }}>
+              <div className="mini-chart-wrapper" style={{ height: 260 }}>
                 <canvas ref={miniSectorsRef}></canvas>
               </div>
             </div>
           </article>
         </div>
 
-        {/* ✅ GRÁFICO EMPILHADO */}
-        <div
-          style={{
-            width: "100%",
-            maxWidth: 900,
-            height: 140,
-            margin: "28px auto 0",
-          }}
-        >
-          <canvas ref={stackedStatusRef}></canvas>
-        </div>
 
-        <div
-          style={{
-            marginTop: 8,
-            textAlign: "center",
-            fontSize: ".9rem",
-            color: "#6b7280",
-          }}
-        >
-          {taxaDetalhada
-            ? `Total no período: ${fmt.format(
-                taxaDetalhada.total
-              )} solicitações`
-            : "Total no período: --"}
-        </div>
+<div
+  style={{
+    marginTop: 24,
+    display: "grid",
+    gridTemplateColumns: "repeat(4, 1fr)",
+    gap: 16,
+    width: "100%",
+  }}
+>
 
-        {/* KPI FINAL */}
-        <div style={{ marginTop: 32, textAlign: "center" }}>
-          <span
-            className="kpi-value"
-            style={{
-              fontSize: "2.6rem",
-              fontWeight: 700,
-              color: "#111827",
-            }}
-          >
-            {taxaResolucaoMediaFmt}
-          </span>
-          <div
-            className="kpi-label"
-            style={{ fontSize: ".95rem", color: "#6b7280", marginTop: 4 }}
-          >
-            taxa média de resolução no período
-          </div>
-        </div>
+  {/* 1) TAXA DE RESPOSTAS */}
+  <div className={`kpi-card ${getTaxaClass(taxaResolucaoCaixa?.taxa_respostas || 0)}`}>
+    <TitleWithTooltip
+      tooltip="Percentual de solicitações iniciadas que receberam ao menos uma resposta (inclui concluídas)."
+      className="kpi-title"
+    >
+      Taxa de respostas
+    </TitleWithTooltip>
+
+    <div className="kpi-value">
+      {Number(taxaResolucaoCaixa?.taxa_respostas ?? 0).toFixed(1)}%
+    </div>
+
+    <div className="kpi-subtext">
+      Iniciadas: {fmt.format(taxaResolucaoCaixa?.iniciadas || 0)} ||
+      Respondidas: {fmt.format(taxaResolucaoCaixa?.respondidas || 0)}
+    </div>
+  </div>
+
+
+  {/* 3) TAXA DE RESOLUÇÃO */}
+  <div className={`kpi-card ${getTaxaClass(taxaResolucaoCaixa?.taxa_resolucao || 0)}`}>
+    <TitleWithTooltip
+      tooltip="Percentual de solicitações concluídas em relação às iniciadas no período selecionado."
+      className="kpi-title"
+    >
+      Taxa de resolução
+    </TitleWithTooltip>
+
+    <div className="kpi-value">
+      {Number(taxaResolucaoCaixa?.taxa_resolucao ?? 0).toFixed(1)}%
+    </div>
+
+    <div className="kpi-subtext">
+       Iniciadas: {fmt.format(taxaResolucaoCaixa?.iniciadas || 0)} -
+      Concluídas: {fmt.format(taxaResolucaoCaixa?.resolvidas || 0)} 
+   
+    </div>
+  </div>
+
+
+  {/* 2) MÉDIA DIÁRIA */}
+  <div className={`kpi-card ${getMediaClass(indicadoresExtra.mediaPorDia)}`}>
+    <TitleWithTooltip
+      tooltip="Média diária = Total de solicitações abertas no período ÷ número de dias considerados."
+      className="kpi-title"
+    >
+      Média diária de solicitações
+    </TitleWithTooltip>
+
+    <div className="kpi-value">
+      {Number(indicadoresExtra.mediaPorDia).toFixed(1)}
+    </div>
+
+    <div className="kpi-subtext">
+      Dias: {indicadoresExtra.diasPeriodo}
+    </div>
+  </div>
+
+  {/* 4) TEMPO MÉDIO DE CONCLUSÃO */}
+  <div
+    className={`kpi-card ${getTempoClass(
+      Math.floor((taxaResolucaoCaixa?.tempo_medio_conclusao_min || 0) / 1440)
+    )}`}
+  >
+    <TitleWithTooltip
+      tooltip="Tempo médio entre a abertura e a conclusão das solicitações resolvidas no período."
+      className="kpi-title"
+    >
+      Tempo médio de resolução
+    </TitleWithTooltip>
+
+    <div className="kpi-value">
+      {formatarTempo(taxaResolucaoCaixa?.tempo_medio_conclusao_min || 0)}
+    </div>
+  </div>
+
+</div>
+
+ 
       </section>
 
-      {/* TABELA FINAL */}
+      {/* TABELA FINAL: RESUMO DO ANO / PERÍODO */}
       <section className="dash-section period-section">
         <div style={{ textAlign: "center", marginBottom: 16 }}>
           <SectionTitle
@@ -914,14 +980,17 @@ stackedStatusChartRef.current = new Chart(ctx, {
             subtitle="Consolidados mensais de solicitações, pessoas atendidas, notificações, tramitações e economia gerada"
           />
 
+          {/* SELECT ANO ALINHADO À DIREITA */}
           <div
             style={{
               marginTop: 8,
               display: "flex",
               justifyContent: "flex-end",
+              width: "100%",
             }}
           >
             <select
+              id="vg-ano-select"
               className="eco-select"
               value={String(anoSel)}
               onChange={(e) => setAnoSel(Number(e.target.value))}
@@ -941,23 +1010,28 @@ stackedStatusChartRef.current = new Chart(ctx, {
               <tr>
                 <th>Período</th>
                 <th>
-                  Solicitações <br />
+                  Solicitações
+                  <br />
                   <span>Geradas</span>
                 </th>
                 <th>
-                  Pessoas Atendidas <br />
+                  Pessoas Atendidas
+                  <br />
                   <span>Únicas</span>
                 </th>
                 <th>
-                  Notificações <br />
+                  Notificações
+                  <br />
                   <span>Total</span>
                 </th>
                 <th>
-                  Tramitações <br />
+                  Tramitações
+                  <br />
                   <span>Total</span>
                 </th>
                 <th>
-                  💰 Economia Gerada <br />
+                  💰 Economia Gerada
+                  <br />
                   <span>Total</span>
                 </th>
               </tr>

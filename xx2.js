@@ -387,115 +387,6 @@ app.get("/api/visao-geral/economia", async (req, res) => {
 });
 
 
-app.get("/api/resumo-periodo", async (req, res) => {
-  try {
-    const ano = parseInt(req.query.ano) || new Date().getFullYear();
-
-    // mesmo custo usado no economômetro
-    const custoPagina = 0.35;
-
-    const [rows] = await db.query(
-      `
-      WITH RECURSIVE meses AS (
-          SELECT 1 AS mes
-          UNION ALL SELECT mes + 1 FROM meses WHERE mes < 12
-      ),
-
-      sol AS (
-          SELECT 
-              MONTH(created_at) AS mes,
-              COUNT(*) AS total_solicitacoes,
-              COUNT(DISTINCT citizen_id) AS pessoas_atendidas
-          FROM solicitations
-          WHERE tenant_id = 1
-            AND YEAR(created_at) = ?
-            AND deleted_at IS NULL
-          GROUP BY MONTH(created_at)
-      ),
-
-      tram AS (
-          SELECT
-              MONTH(t.created_at) AS mes,
-              COUNT(*) AS total_tramitacoes
-          FROM tramitations t
-          JOIN solicitations s ON s.id = t.solicitation_id
-          WHERE s.tenant_id = 1
-            AND YEAR(t.created_at) = ?
-          GROUP BY MONTH(t.created_at)
-      ),
-
-      notif AS (
-          SELECT 
-              MONTH(created_at) AS mes,
-              COUNT(*) AS total_notificacoes
-          FROM notifications
-          WHERE tenant_id = 1
-            AND YEAR(created_at) = ?
-          GROUP BY MONTH(created_at)
-      )
-
-      SELECT
-          m.mes,
-          DATE_FORMAT(STR_TO_DATE(CONCAT(?, '-', m.mes, '-01'), '%Y-%m-%d'), '%b') AS mes_nome,
-
-          COALESCE(sol.total_solicitacoes, 0) AS total_solicitacoes,
-          COALESCE(sol.pessoas_atendidas, 0) AS pessoas_atendidas,
-          COALESCE(tram.total_tramitacoes, 0) AS total_tramitacoes,
-          COALESCE(notif.total_notificacoes, 0) AS total_notificacoes,
-
-          -- ✅ folhas economizadas — MESMO cálculo do economômetro
-          (
-            (COALESCE(sol.total_solicitacoes, 0) * 0.65) +
-            (COALESCE(tram.total_tramitacoes, 0) * 0.20)
-          ) AS folhas_economizadas,
-
-          -- ✅ economia financeira
-          (
-            (
-              (COALESCE(sol.total_solicitacoes, 0) * 0.65) +
-              (COALESCE(tram.total_tramitacoes, 0) * 0.20)
-            ) * ?
-          ) AS economia_gerada
-
-      FROM meses m
-      LEFT JOIN sol   ON sol.mes   = m.mes
-      LEFT JOIN tram  ON tram.mes  = m.mes
-      LEFT JOIN notif ON notif.mes = m.mes
-      ORDER BY m.mes;
-      `,
-      [ano, ano, ano, ano, custoPagina]
-    );
-
-    const mesAtual = new Date().getMonth() + 1;
-
-    const totalEconomia = rows
-      .filter(r => r.mes <= mesAtual)
-      .reduce((sum, r) => sum + Number(r.economia_gerada || 0), 0);
-
-    const totalFolhas = rows
-      .filter(r => r.mes <= mesAtual)
-      .reduce((sum, r) => sum + Number(r.folhas_economizadas || 0), 0);
-
-    const totalArvores = totalFolhas / 8000;
-
-    res.json({
-      ano,
-      meses: rows,
-      total: {
-        folhas: Math.round(totalFolhas),
-        arvores: Number(totalArvores.toFixed(3)),
-        dinheiro: Number(totalEconomia.toFixed(2)),
-        custo_pagina_usado: custoPagina
-      }
-    });
-
-  } catch (err) {
-    console.error("Erro resumo período:", err);
-    res.status(500).json({ error: "Erro ao buscar dados" });
-  }
-});
-
-
 /**
  * ============================================================
  * 5) RESUMO DE CIDADÃOS
@@ -536,101 +427,31 @@ app.get("/api/visao-geral/cidadaos-resumo", async (req, res) => {
  */
 app.get("/api/setores", async (req, res) => {
   try {
-    const [rows] = await db.query(`
-      WITH RECURSIVE setores_hierarquia AS (
-        SELECT
-          id AS sector_id,
-          parent_id,
-          title,
-          0 AS nivel,
-          CAST(id AS CHAR(500)) AS path,
-          CAST(title AS CHAR(500)) AS hierarquia,
-          id AS root_id
-        FROM jp_conectada.sectors
-        WHERE active = 1
-          AND tenant_id = 1
-          AND parent_id IS NULL
-
-        UNION ALL
-
-        SELECT
-          s.id AS sector_id,
-          s.parent_id,
-          s.title,
-          sh.nivel + 1 AS nivel,
-          CONCAT(sh.path, ',', s.id) AS path,
-          CONCAT(sh.hierarquia, ' > ', s.title) AS hierarquia,
-          sh.root_id
-        FROM jp_conectada.sectors s
-        JOIN setores_hierarquia sh ON sh.sector_id = s.parent_id
-        WHERE s.active = 1
-          AND s.tenant_id = 1
-      ),
-
-      setores_unicos AS (
-        SELECT *
-        FROM (
-          SELECT *,
-                 ROW_NUMBER() OVER (PARTITION BY sector_id ORDER BY nivel) AS rn
-          FROM setores_hierarquia
-        ) x
-        WHERE rn = 1
-      ),
-
-      servicos_individuais AS (
-        SELECT
-          s.id AS sector_id,
-          COUNT(DISTINCT CASE WHEN ss.\`primary\` = 1 THEN ss.service_id END) AS principal_individual,
-          COUNT(DISTINCT CASE WHEN ss.\`primary\` = 0 THEN ss.service_id END) AS participante_individual
-        FROM jp_conectada.sectors s
-        LEFT JOIN jp_conectada.service_sector ss ON ss.sector_id = s.id
-        LEFT JOIN jp_conectada.services se 
-               ON se.id = ss.service_id
-              AND se.active = 1
-              AND se.tenant_id = 1
-        WHERE s.active = 1
-          AND s.tenant_id = 1
-        GROUP BY s.id
-      ),
-
-      consolidados AS (
-        SELECT
-          root.root_id,
-          SUM(si.principal_individual)    AS principal_consolidado,
-          SUM(si.participante_individual) AS participante_consolidado
-        FROM setores_unicos root
-        JOIN setores_unicos child 
-          ON FIND_IN_SET(root.sector_id, child.path) > 0
-        JOIN servicos_individuais si 
-          ON si.sector_id = child.sector_id
-        WHERE root.nivel = 0
-        GROUP BY root.root_id
-      )
-
+    const [rows] = await db.query(
+      `
       SELECT
-        su.sector_id,
-        su.title AS setor,
-        su.parent_id,
-        su.nivel,
-        su.hierarquia,
-        si.principal_individual AS servicos_principal_individual,
-        si.participante_individual AS servicos_participante_individual,
-        CASE WHEN su.nivel = 0 
-             THEN cn.principal_consolidado ELSE 0 END AS servicos_principal_consolidado,
-        CASE WHEN su.nivel = 0 
-             THEN cn.participante_consolidado ELSE 0 END AS servicos_participante_consolidado,
-        su.path
-      FROM setores_unicos su
-      LEFT JOIN servicos_individuais si ON si.sector_id = su.sector_id
-      LEFT JOIN consolidados cn ON cn.root_id = su.root_id
-      ORDER BY su.path;
-    `);
+        s.id,
+        s.title,
+        s.parent_id,
+        s.path,
+        s.active,
+        (
+          SELECT COUNT(*)
+          FROM jp_conectada.solicitations sol
+          WHERE sol.sector_id = s.id
+        ) AS total_solicitacoes
+      FROM jp_conectada.sectors s
+      WHERE s.tenant_id = ?
+      ORDER BY s.path ASC
+      `,
+      [TENANT_ID]
+    );
 
     res.json(rows);
 
   } catch (error) {
-    console.error("Erro SQL:", error);
-    res.status(500).json({ error: "Erro ao buscar setores" });
+    console.error("Erro /api/setores:", error);
+    res.status(500).json({ error: "Erro ao carregar setores" });
   }
 });
 
@@ -704,115 +525,73 @@ app.get("/api/setores/:id/usuarios", async (req, res) => {
  * 4) EFICIÊNCIA POR SETOR — /api/setores-eficiencia
  * ============================================================
  */
+app.get("/api/setores-eficiencia", async (req, res) => {
+  try {
+    const sql = `
+      SELECT
+        s.id,
+        s.title AS setor,
+        COUNT(*) AS total,
+        SUM(CASE WHEN sol.status = 1 THEN 1 END) AS concluidas,
+        SUM(CASE WHEN sol.status IN (2,3) THEN 1 END) AS respondidas
+      FROM jp_conectada.sectors s
+      LEFT JOIN jp_conectada.solicitations sol ON sol.sector_id = s.id
+      WHERE s.tenant_id = ?
+      GROUP BY s.id
+      ORDER BY s.title
+    `;
+
+    const [rows] = await db.query(sql, [TENANT_ID]);
+
+    const result = rows.map(r => ({
+      setor: r.setor,
+      total: r.total,
+      eficiência: r.total > 0 ? Number(((r.concluidas / r.total) * 100).toFixed(1)) : 0,
+      engajamento: r.total > 0
+        ? Number(((r.respondidas / r.total) * 100).toFixed(1))
+        : 0
+    }));
+
+    res.json(result);
+
+  } catch (err) {
+    console.error("Erro /setores-eficiencia:", err);
+    res.status(500).json({ error: "Erro ao carregar eficiência dos setores" });
+  }
+});
+
 
 /**
  * ============================================================
  * 5) QUALIDADE POR SETOR — /api/setores-qualidade
  * ============================================================
  */
-
-app.get("/api/setores-eficiencia", async (req, res) => {
+app.get("/api/setores-qualidade", async (req, res) => {
   try {
-    const [rows] = await db.query(`
-      WITH servicos_por_setor AS (
-          SELECT 
-              ss.sector_id,
-              s.id AS solicitation_id,
-              s.status
-          FROM jp_conectada.service_sector ss
-          JOIN jp_conectada.services se 
-                ON se.id = ss.service_id
-               AND se.tenant_id = 1
-          JOIN jp_conectada.solicitations s 
-                ON s.service_id = ss.service_id
-               AND s.tenant_id = 1
-      ),
-
-      agrupado AS (
-          SELECT 
-              sector_id,
-              COUNT(*) AS total_solicitacoes,
-              COUNT(CASE WHEN status = 0 THEN 1 END) AS total_abertas,
-              COUNT(CASE WHEN status = 1 THEN 1 END) AS total_concluidas,
-              COUNT(CASE WHEN status = 2 THEN 1 END) AS total_respondidas
-          FROM servicos_por_setor
-          GROUP BY sector_id
-      )
-
+    const sql = `
       SELECT
-          sec.id AS sector_id,
-          sec.title AS setor,
-          a.total_solicitacoes,
-          a.total_abertas,
-          a.total_concluidas,
-          a.total_respondidas,
+        s.title AS setor,
+        AVG(a.score) AS nota_media,
+        SUM(a.total_votes) AS total_avaliacoes
+      FROM jp_conectada.sectors s
+      JOIN jp_conectada.services serv ON serv.sector_id = s.id
+      JOIN jp_conectada.averages a
+           ON a.evaluated_id = serv.id
+          AND a.evaluated_type = 'App\\\\Models\\\\Service\\\\Service'
+      WHERE s.tenant_id = ?
+      GROUP BY s.id
+      ORDER BY nota_media DESC
+    `;
 
-          CASE WHEN a.total_solicitacoes > 0
-              THEN ROUND((a.total_concluidas / a.total_solicitacoes) * 100, 2)
-              ELSE NULL END AS eficiencia_percentual,
-
-          CASE WHEN a.total_solicitacoes > 0
-              THEN ROUND((a.total_respondidas / a.total_solicitacoes) * 100, 2)
-              ELSE NULL END AS engajamento_percentual
-
-      FROM jp_conectada.sectors sec
-      LEFT JOIN agrupado a ON a.sector_id = sec.id
-      WHERE sec.active = 1
-        AND sec.tenant_id = 1
-      ORDER BY setor;
-    `);
-
+    const [rows] = await db.query(sql, [TENANT_ID]);
     res.json(rows);
 
   } catch (error) {
-    console.error("Erro SQL EFICIENCIA:", error);
-    res.status(500).json({ error: "Erro ao buscar eficiência por setor" });
-  }
-});
-
-app.get("/api/setores-qualidade", async (req, res) => {
-  try {
-    const [rows] = await db.query(`
-      WITH notas_por_servico AS (
-          SELECT
-              a.evaluated_id AS service_id,
-              a.score AS nota,
-              a.total_votes
-          FROM jp_conectada.averages a
-          WHERE a.tenant_id = 1
-            AND a.evaluated_type = 'App\\\\Models\\\\Service\\\\Service'
-      ),
-
-      notas_por_setor AS (
-          SELECT
-              ss.sector_id,
-              AVG(nps.nota) AS nota_media,
-              SUM(nps.total_votes) AS total_avaliacoes
-          FROM jp_conectada.service_sector ss
-          LEFT JOIN notas_por_servico nps 
-                  ON nps.service_id = ss.service_id
-          GROUP BY ss.sector_id
-      )
-
-      SELECT
-          sec.id AS sector_id,
-          sec.title AS setor,
-          nps.nota_media,
-          nps.total_avaliacoes
-      FROM jp_conectada.sectors sec
-      LEFT JOIN notas_por_setor nps ON nps.sector_id = sec.id
-      WHERE sec.active = 1
-        AND sec.tenant_id = 1
-      ORDER BY setor;
-    `);
-
-    res.json(rows);
-
-  } catch (err) {
-    console.error("Erro SQL SETORES QUALIDADE:", err);
+    console.error("Erro /setores-qualidade:", error);
     res.status(500).json({ error: "Erro ao carregar qualidade dos setores" });
   }
 });
+
 
 /**
  * ============================================================
@@ -862,45 +641,6 @@ app.get("/api/setores-consolidado", async (req, res) => {
  * criados_30d
  * ============================================================
  */
-
-app.get("/api/usuarios/lista", async (req, res) => {
-  try {
-    const limit = Number(req.query.limit || 50);
-    const offset = Number(req.query.offset || 0);
-
-    const sql = `
-      SELECT 
-        u.id,
-        CONCAT(u.first_name, ' ', u.last_name) AS nome,
-        u.email,
-        u.phone,
-        u.created_at,
-        u.last_login_at,
-
-        (SELECT MAX(t.created_at)
-         FROM tramitations t
-         JOIN solicitations s ON s.id = t.solicitation_id
-         WHERE t.origem_user = CONCAT(u.first_name, ' ', u.last_name)
-           AND s.tenant_id = 1
-        ) AS ultimo_despacho
-
-      FROM users u
-      WHERE u.tenant_id = 1
-        AND u.active = 1
-      ORDER BY u.first_name, u.last_name
-      LIMIT ? OFFSET ?
-    `;
-
-    const [rows] = await db.query(sql, [limit, offset]);
-
-    res.json(rows);
-
-  } catch (err) {
-    console.error("Erro paginado:", err);
-    res.status(500).json({ error: true });
-  }
-});
-
 app.get("/api/usuarios/kpis", async (req, res) => {
   try {
     const hoje = new Date();
@@ -1079,213 +819,109 @@ app.get("/api/usuarios/ranking", async (req, res) => {
  * - total de despachos no período
  * ============================================================
  */
-// app.get("/api/usuarios/detalhes", async (req, res) => {
-//   try {
-//     const { inicio, fim } = req.query;
-
-//     const inicio_full = `${inicio} 00:00:00`;
-//     const fim_full = `${fim} 23:59:59`;
-
-//     const sql = `
-//     WITH usuario_setores AS (
-//         SELECT 
-//             su.user_id,
-//             GROUP_CONCAT(s.title ORDER BY s.title SEPARATOR ', ') AS setores
-//         FROM jp_conectada.sector_user su
-//         JOIN jp_conectada.sectors s ON s.id = su.sector_id
-//         WHERE su.active = 1
-//         GROUP BY su.user_id
-//     ),
-
-//     ultimos_despachos AS (
-//         SELECT 
-//             t.origem_user AS nome_usuario,
-//             MAX(t.created_at) AS ultimo_despacho
-//         FROM jp_conectada.tramitations t
-//         JOIN jp_conectada.solicitations s ON s.id = t.solicitation_id
-//         WHERE s.tenant_id = ?
-//         GROUP BY t.origem_user
-//     ),
-
-//     despachos_periodo AS (
-//         SELECT
-//             t.origem_user AS nome_usuario,
-//             COUNT(*) AS total_despachos_periodo
-//         FROM jp_conectada.tramitations t
-//         JOIN jp_conectada.solicitations s ON s.id = t.solicitation_id
-//         WHERE s.tenant_id = ?
-//           AND t.created_at BETWEEN ? AND ?
-//         GROUP BY t.origem_user
-//     )
-
-//     SELECT
-//         u.id,
-//         CONCAT(u.first_name, ' ', u.last_name) AS nome,
-//         u.email,
-//         u.phone,
-
-//         us.setores AS setores,
-
-//         u.created_at AS data_cadastro,
-
-//         ud.ultimo_despacho,
-
-//         CASE 
-//             WHEN ud.ultimo_despacho IS NULL THEN NULL
-//             ELSE DATEDIFF(CURDATE(), DATE(ud.ultimo_despacho))
-//         END AS dias_sem_despacho,
-
-//         COALESCE(dp.total_despachos_periodo, 0) AS despachos_periodo
-
-//     FROM jp_conectada.users u
-
-//     LEFT JOIN usuario_setores us 
-//            ON us.user_id = u.id
-
-//     LEFT JOIN ultimos_despachos ud 
-//            ON ud.nome_usuario = CONCAT(u.first_name, ' ', u.last_name)
-
-//     LEFT JOIN despachos_periodo dp
-//            ON dp.nome_usuario = CONCAT(u.first_name, ' ', u.last_name)
-
-//     WHERE 
-//         u.tenant_id = ?
-//         AND u.active = 1
-//         AND u.email NOT LIKE '%@cubotecnologiabr.com.br%'
-
-//     GROUP BY
-//         u.id,
-//         nome,
-//         us.setores,
-//         u.email,
-//         u.phone,
-//         u.created_at,
-//         ud.ultimo_despacho,
-//         dp.total_despachos_periodo
-
-//     ORDER BY 
-//         ud.ultimo_despacho DESC;
-//     `;
-
-//     const [rows] = await db.query(sql, [
-//       TENANT_ID,
-//       TENANT_ID,
-//       inicio_full,
-//       fim_full,
-//       TENANT_ID
-//     ]);
-
-//     res.json(rows);
-
-//   } catch (err) {
-//     console.error("Erro /usuarios/detalhes:", err);
-//     res.status(500).json({ error: true });
-//   }
-// });
-
 app.get("/api/usuarios/detalhes", async (req, res) => {
   try {
-    const inicio = req.query.inicio || null;
-    const fim = req.query.fim || null;
+    const { inicio, fim } = req.query;
 
-    let filtroPeriodo = "";
-    const params = [];
+    const inicio_full = `${inicio} 00:00:00`;
+    const fim_full = `${fim} 23:59:59`;
 
-    // validação
-    if (inicio && fim) {
-      filtroPeriodo = ` AND t.created_at BETWEEN ? AND ? `;
-      params.push(`${inicio} 00:00:00`);
-      params.push(`${fim} 23:59:59`);
-    }
+    const sql = `
+    WITH usuario_setores AS (
+        SELECT 
+            su.user_id,
+            GROUP_CONCAT(s.title ORDER BY s.title SEPARATOR ', ') AS setores
+        FROM jp_conectada.sector_user su
+        JOIN jp_conectada.sectors s ON s.id = su.sector_id
+        WHERE su.active = 1
+        GROUP BY su.user_id
+    ),
 
-    const [rows] = await db.query(
-      `
-WITH usuario_setor AS (
-    SELECT DISTINCT 
-        su.user_id,
-        s.title AS setor_nome,
-        (
-          SELECT GROUP_CONCAT(s2.title SEPARATOR ', ')
-          FROM sector_user su2
-          JOIN sectors s2 ON s2.id = su2.sector_id
-          WHERE su2.user_id = su.user_id AND su2.active = 1
-        ) AS setores_filhos
-    FROM sector_user su
-    LEFT JOIN sectors s ON s.id = su.sector_id
-    WHERE su.active = 1
-),
+    ultimos_despachos AS (
+        SELECT 
+            t.origem_user AS nome_usuario,
+            MAX(t.created_at) AS ultimo_despacho
+        FROM jp_conectada.tramitations t
+        JOIN jp_conectada.solicitations s ON s.id = t.solicitation_id
+        WHERE s.tenant_id = ?
+        GROUP BY t.origem_user
+    ),
 
-ultimos_despachos AS (
-    SELECT 
-        t.origem_user AS nome_usuario,
-        MAX(t.created_at) AS ultimo_despacho
-    FROM tramitations t
-    JOIN solicitations s ON s.id = t.solicitation_id
-    WHERE s.tenant_id = 1 AND s.deleted_at IS NULL
-    GROUP BY t.origem_user
-),
+    despachos_periodo AS (
+        SELECT
+            t.origem_user AS nome_usuario,
+            COUNT(*) AS total_despachos_periodo
+        FROM jp_conectada.tramitations t
+        JOIN jp_conectada.solicitations s ON s.id = t.solicitation_id
+        WHERE s.tenant_id = ?
+          AND t.created_at BETWEEN ? AND ?
+        GROUP BY t.origem_user
+    )
 
-despachos_periodo AS (
     SELECT
-        t.origem_user AS nome_usuario,
-        COUNT(*) AS total_despachos_periodo
-    FROM tramitations t
-    JOIN solicitations s ON s.id = t.solicitation_id
-    WHERE s.tenant_id = 1
-      AND s.deleted_at IS NULL
-      ${filtroPeriodo}
-    GROUP BY t.origem_user
-)
+        u.id,
+        CONCAT(u.first_name, ' ', u.last_name) AS nome,
+        u.email,
+        u.phone,
 
-SELECT
-    u.id,
-    CONCAT(u.first_name, ' ', u.last_name) AS nome,
-    us.setor_nome AS secretaria,
-    us.setores_filhos AS departamentos,
-    u.phone,
-    u.email,
-    u.created_at AS data_cadastro,
-    ud.ultimo_despacho,
-    CASE 
-        WHEN ud.ultimo_despacho IS NULL THEN NULL
-        ELSE DATEDIFF(CURDATE(), DATE(ud.ultimo_despacho))
-    END AS dias_sem_despacho,
-    COALESCE(dp.total_despachos_periodo, 0) AS despachos_periodo
+        us.setores AS setores,
 
-FROM users u
-LEFT JOIN usuario_setor us ON us.user_id = u.id
-LEFT JOIN ultimos_despachos ud ON ud.nome_usuario = CONCAT(u.first_name, ' ', u.last_name)
-LEFT JOIN despachos_periodo dp ON dp.nome_usuario = CONCAT(u.first_name, ' ', u.last_name)
+        u.created_at AS data_cadastro,
 
-WHERE 
-    u.tenant_id = 1
-    AND u.active = 1
+        ud.ultimo_despacho,
 
-GROUP BY
-    u.id,
-    nome,
-    us.setor_nome,
-    us.setores_filhos,
-    u.phone,
-    u.email,
-    u.created_at,
-    ud.ultimo_despacho,
-    dp.total_despachos_periodo
+        CASE 
+            WHEN ud.ultimo_despacho IS NULL THEN NULL
+            ELSE DATEDIFF(CURDATE(), DATE(ud.ultimo_despacho))
+        END AS dias_sem_despacho,
 
-ORDER BY ud.ultimo_despacho DESC
-      `,
-      params
-    );
+        COALESCE(dp.total_despachos_periodo, 0) AS despachos_periodo
+
+    FROM jp_conectada.users u
+
+    LEFT JOIN usuario_setores us 
+           ON us.user_id = u.id
+
+    LEFT JOIN ultimos_despachos ud 
+           ON ud.nome_usuario = CONCAT(u.first_name, ' ', u.last_name)
+
+    LEFT JOIN despachos_periodo dp
+           ON dp.nome_usuario = CONCAT(u.first_name, ' ', u.last_name)
+
+    WHERE 
+        u.tenant_id = ?
+        AND u.active = 1
+        AND u.email NOT LIKE '%@cubotecnologiabr.com.br%'
+
+    GROUP BY
+        u.id,
+        nome,
+        us.setores,
+        u.email,
+        u.phone,
+        u.created_at,
+        ud.ultimo_despacho,
+        dp.total_despachos_periodo
+
+    ORDER BY 
+        ud.ultimo_despacho DESC;
+    `;
+
+    const [rows] = await db.query(sql, [
+      TENANT_ID,
+      TENANT_ID,
+      inicio_full,
+      fim_full,
+      TENANT_ID
+    ]);
 
     res.json(rows);
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ erro: "Erro ao gerar relatório de usuários" });
+    console.error("Erro /usuarios/detalhes:", err);
+    res.status(500).json({ error: true });
   }
 });
-
-
 /* ============================================================
    📄 ROTAS — SOLICITAÇÕES (REQUISIÇÕES)
 ============================================================ */
@@ -2133,35 +1769,4 @@ app.get("/api/setor/:id/status", async (req, res) => {
     console.error("Erro /setor/status:", err);
     res.status(500).json({ error: "Erro ao carregar status do setor" });
   }
-});
-
-
-
-/* =============================
-   ✅ 404 Handler
-============================= */
-app.use((req, res) => {
-  logger.error("rota não encontrada", { path: req.originalUrl });
-  res.status(404).json({ error: "Rota não encontrada" });
-});
-
-
-/* =============================
-   ✅ Error Handler Global
-============================= */
-app.use((err, req, res, next) => {
-  logger.error("erro interno", { err });
-  res.status(500).json({ error: "Erro interno no servidor" });
-});
-
-
-/* =============================
-   ✅ START SERVER
-============================= */
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  logger.info(`✅ Servidor rodando na porta ${PORT}`, {
-    env: process.env.NODE_ENV || "development"
-  });
 });
