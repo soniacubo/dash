@@ -7,7 +7,7 @@ require("dotenv").config();
 
 const app = express();
 const TENANT_ID = 1;
-onst isDev = process.env.NODE_ENV !== "production";
+const isDev = process.env.NODE_ENV !== "production";
 
 const allowedOrigins = [
   "https://dash-lovat-alpha.vercel.app",
