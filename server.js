@@ -1763,9 +1763,7 @@ app.use((err, req, res, next) => {
   console.error("Erro:", err);
   res.status(500).json({ error: "Erro interno" });
 });
-app.get("*", (req, res) => {
-  res.status(404).json({ error: "Rota não encontrada" });
-});
+
 
 
 // =========================================================
@@ -1777,4 +1775,7 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`, {
     env: process.env.NODE_ENV || "development"
   });
+});app.use((req, res) => {
+  logger.error("rota não encontrada", { path: req.originalUrl });
+  res.status(404).json({ error: "Rota não encontrada" });
 });
