@@ -2158,10 +2158,14 @@ app.use((err, req, res, next) => {
 /* =============================
    ✅ START SERVER
 ============================= */
+/* ================================
+   ✅ START SERVER
+================================= */
+
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-  logger.info(`✅ Servidor rodando na porta ${PORT}`, {
+app.listen(PORT, "0.0.0.0", () => {
+  logger.info(`🚀 Servidor rodando na porta ${PORT}`, {
     env: process.env.NODE_ENV || "development"
   });
 });
