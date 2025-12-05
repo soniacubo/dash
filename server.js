@@ -1,6 +1,3 @@
-// =========================================================
-// 🌐 IMPORTS / CONFIGURAÇÕES
-// =========================================================
 const express = require("express");
 const mysql = require("mysql2/promise");
 const cors = require("cors");
@@ -8,14 +5,9 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const path = require("path");
 require("dotenv").config();
-
 const app = express();
 const TENANT_ID = 1;
 
-
-// =========================================================
-// 🔐 CORS — VERCEL + RENDER + LOCALHOST
-// =========================================================
 const allowedOrigins = [
   "http://localhost:3000",
   "http://127.0.0.1:3000",
@@ -53,9 +45,6 @@ app.set("trust proxy", 1);
 app.use(rateLimit({ windowMs: 60 * 1000, max: 300 }));
 
 
-// =========================================================
-// 🗄 MYSQL POOL
-// =========================================================
 const db = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -65,23 +54,16 @@ const db = mysql.createPool({
   connectionLimit: 10
 });
 
-/* -------------------------------------------------------
-   🔥 ROTA DE TESTE (AGORA EXISTE)
-------------------------------------------------------- */
+ //  🔥 ROTA DE TESTE (AGORA EXISTE)
 app.get("/", (req, res) => {
   res.json({ status: "OK", message: "API funcionando 🚀" });
 });
-
-/* ============================================================
-   🛠️ HELPERS
-============================================================ */
 
 function brToMySQL(dateBR) {
   if (!dateBR) return null;
   const [d, m, y] = dateBR.split("/");
   return `${y}-${m}-${d}`;
 }
-
 function getPeriodoDates(periodoRaw) {
   const periodo = String(periodoRaw || "30d");
   const agora = new Date();
@@ -138,7 +120,6 @@ function getPeriodoDates(periodoRaw) {
 
   return { inicio, fim, diasPeriodo, periodo };
 }
-
 function getStartDateFromPeriod(periodKey) {
   const now = new Date();
   now.setHours(23, 59, 59, 999);
@@ -156,219 +137,20 @@ function getStartDateFromPeriod(periodKey) {
 
   return `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,"0")}-${String(start.getDate()).padStart(2,"0")} 00:00:00`;
 }
-
-// app.get("/api/visao-geral/totais", async (req, res) => {
-//   try {
-//     const tenantId = TENANT_ID;
-
-//     /* ---------------------- SERVIÇOS ---------------------- */
-//     const [[serv]] = await db.query(
-//       `SELECT COUNT(*) AS total FROM jp_conectada.services WHERE tenant_id = ? AND active = 1`,
-//       [tenantId]
-//     );
-
-//     /* ---------------------- SETORES ----------------------- */
-//     const [[secs]] = await db.query(
-//       `SELECT COUNT(*) AS total FROM jp_conectada.sectors WHERE tenant_id = ? AND active = 1`,
-//       [tenantId]
-//     );
-
-//     /* ---------------------- USUÁRIOS ---------------------- */
-//     const [[users]] = await db.query(
-//       `
-//       SELECT COUNT(DISTINCT u.id) AS total
-//       FROM jp_conectada.users u
-//       LEFT JOIN jp_conectada.sector_user su ON su.user_id = u.id
-//       WHERE u.tenant_id = ? AND u.active = 1
-//       `,
-//       [tenantId]
-//     );
-
-//     /* ---------------------- CIDADÃOS ---------------------- */
-//     let totalCid = 0;
-//     try {
-//       const [[cid]] = await db.query(
-//         `SELECT COUNT(*) AS total FROM jp_conectada.citizens WHERE tenant_id = ?`,
-//         [tenantId]
-//       );
-//       totalCid = cid.total;
-//     } catch {
-//       totalCid = 0;
-//     }
-
-//     /* ---------------------- EFICIÊNCIA ---------------------- */
-//     const [[ef]] = await db.query(
-//       `
-//       SELECT
-//         COUNT(*) AS total,
-//         SUM(CASE WHEN s.status = 1 THEN 1 END) AS concluidas,
-//         SUM(CASE WHEN s.status = 2 THEN 1 END) AS respondidas
-//       FROM jp_conectada.solicitations s
-//       WHERE s.tenant_id = ?
-//       `,
-//       [tenantId]
-//     );
-
-//     const totalSol = ef.total || 0;
-//     const concluidas = ef.concluidas || 0;
-//     const respondidas = ef.respondidas || 0;
-
-//     const eficienciaPct = totalSol > 0 ? (concluidas / totalSol) * 100 : 0;
-
-//     const abertasNaoConcl = Math.max(totalSol - concluidas, 0);
-//     let respondidasNaoConcl = Math.max(respondidas - concluidas, 0);
-
-//     const engajamentoPct = abertasNaoConcl > 0
-//       ? (respondidasNaoConcl / abertasNaoConcl) * 100
-//       : 0;
-
-//     /* ---------------------- QUALIDADE ---------------------- */
-//     let qualidadeMedia = 0, totalAvaliacoes = 0;
-
-//     try {
-//       const [[qual]] = await db.query(
-//         `
-//         SELECT AVG(av.score) AS nota_media, COUNT(*) AS total
-//         FROM jp_conectada.service_evaluations av
-//         JOIN jp_conectada.solicitations s ON s.id = av.solicitation_id
-//         WHERE s.tenant_id = ?
-//         `,
-//         [tenantId]
-//       );
-
-//       qualidadeMedia = qual.nota_media || 0;
-//       totalAvaliacoes = qual.total || 0;
-
-//     } catch (err) {
-//       qualidadeMedia = 0;
-//       totalAvaliacoes = 0;
-//     }
-
-//     /* ---------------------- ECONOMIA ---------------------- */
-//     const P_PAGINAS = 4;
-//     const C_PAGINA = 0.35;
-//     const C_MANUSEIO = 0.80;
-
-//     const economiaRS = totalSol * (P_PAGINAS * C_PAGINA + C_MANUSEIO);
-
-//     res.json({
-//       totais: {
-//         servicos: serv.total,
-//         setores: secs.total,
-//         usuarios: users.total,
-//         cidadaos: totalCid
-//       },
-//       desempenho: {
-//         eficiencia_pct: Number(eficienciaPct.toFixed(1)),
-//         engajamento_pct: Number(engajamentoPct.toFixed(1)),
-//         qualidade_media: Number(qualidadeMedia.toFixed(2)),
-//         total_avaliacoes: totalAvaliacoes
-//       },
-//       economia: {
-//         estimada_rs: Number(economiaRS.toFixed(2)),
-//         parametros: { P_PAGINAS, C_PAGINA, C_MANUSEIO }
-//       }
-//     });
-
-//   } catch (e) {
-//     console.error(e);
-//     res.status(500).json({ error: "Erro ao carregar visão geral" });
-//   }
-// });
-
-
-// app.get("/api/visao-geral/totais", async (req, res) => {
-//   try {
-//     const tenant = TENANT_ID;
-
-//     // -------------------------- Totais --------------------------
-//     const [[totalServicos]] = await db.query(
-//       `SELECT COUNT(*) AS total FROM jp_conectada.services WHERE tenant_id = ? AND active = 1`,
-//       [tenant]
-//     );
-
-//     const [[totalSetores]] = await db.query(
-//       `SELECT COUNT(*) AS total FROM jp_conectada.sectors WHERE tenant_id = ? AND active = 1`,
-//       [tenant]
-//     );
-
-//     const [[totalUsuarios]] = await db.query(
-//       `SELECT COUNT(DISTINCT u.id) AS total
-//          FROM jp_conectada.users u
-//          LEFT JOIN jp_conectada.sector_user su ON su.user_id = u.id
-//        WHERE u.tenant_id = ? AND u.active = 1`,
-//       [tenant]
-//     );
-
-//     const [[totalCidadaos]] = await db.query(
-//       `SELECT COUNT(*) AS total FROM jp_conectada.citizens WHERE tenant_id = ?`,
-//       [tenant]
-//     ).catch(() => [{ total: 0 }]);
-
-//     // -------------------------- Eficiência / Engajamento --------------------------
-//     const [[dadosEf]] = await db.query(
-//       `
-//       SELECT
-//           COUNT(*) AS total,
-//           SUM(CASE WHEN status = 1 THEN 1 END) AS concluidas,
-//           SUM(CASE WHEN status = 2 OR status = 3 THEN 1 END) AS respondidas
-//       FROM jp_conectada.solicitations
-//       WHERE tenant_id = ?`,
-//       [tenant]
-//     );
-
-//     const total = Number(dadosEf.total || 0);
-//     const concl = Number(dadosEf.concluidas || 0);
-//     const resp  = Number(dadosEf.respondidas || 0);
-
-//     const eficiencia_pct = total > 0 ? Number(((concl / total) * 100).toFixed(1)) : 0;
-//     const engajamento_pct = (total - concl) > 0
-//       ? Number(((resp / (total - concl)) * 100).toFixed(1))
-//       : 0;
-
-//     // -------------------------- Qualidade média --------------------------
-//     const [[qual]] = await db.query(
-//       `
-//       SELECT
-//           AVG(a.score) AS nota_media,
-//           SUM(a.total_votes) AS total_avaliacoes
-//       FROM jp_conectada.averages a
-//       WHERE a.evaluated_type = 'App\\\\Models\\\\Service\\\\Service'
-//       `,
-//     ).catch(() => [{ nota_media: 0, total_avaliacoes: 0 }]);
-
-//     // -------------------------- Economia estimada --------------------------
-//     const CUSTO_PAGINA = 0.35;
-//     const P_PAGINAS    = 4;
-//     const C_MANUSEIO   = 0.80;
-
-//     const economia = total * (P_PAGINAS * CUSTO_PAGINA + C_MANUSEIO);
-
-//     res.json({
-//       totais: {
-//         servicos: totalServicos.total,
-//         setores: totalSetores.total,
-//         usuarios: totalUsuarios.total,
-//         cidadaos: totalCidadaos.total
-//       },
-//       desempenho: {
-//         eficiência_pct: eficiencia_pct,
-//         engajamento_pct: engajamento_pct,
-//         qualidade_media: Number((qual.nota_media || 0).toFixed(2)),
-//         total_avaliacoes: qual.total_avaliacoes || 0
-//       },
-//       economia: {
-//         estimada_rs: Number(economia.toFixed(2)),
-//         parametros: { P_PAGINAS, CUSTO_PAGINA, C_MANUSEIO }
-//       }
-//     });
-
-//   } catch (err) {
-//     console.error("Erro /api/visao-geral:", err);
-//     res.status(500).json({ error: "Erro ao carregar visão geral" });
-//   }
-// });
-
+function dateRangeForYear(year) {
+  const start = `${year}-01-01 00:00:00`;
+  const end = `${year}-12-31 23:59:59`;
+  return { start, end };
+}
+const _cache = new Map();
+async function withCache(key, ttlMs, loader) {
+  const now = Date.now();
+  const entry = _cache.get(key);
+  if (entry && (now - entry.t) < ttlMs) return entry.v;
+  const v = await loader();
+  _cache.set(key, { v, t: now });
+  return v;
+}
 
 app.get("/api/visao-geral/series", async (req, res) => {
   try {
@@ -410,7 +192,6 @@ app.get("/api/visao-geral/series", async (req, res) => {
     res.status(500).json({ error: "Erro ao carregar séries" });
   }
 });
-
 
 // app.get("/api/visao-geral/evolucao-uso", async (req, res) => {
 //   try {
@@ -470,6 +251,8 @@ app.get("/api/visao-geral/economia", async (req, res) => {
     `;
 
     const [rows] = await db.query(sql, [TENANT_ID, ano]);
+    res.setHeader("Cache-Control", "public, max-age=60");
+    res.setHeader("Cache-Control", "public, max-age=60");
     res.json(rows);
 
   } catch (err) {
@@ -502,7 +285,6 @@ app.get("/api/visao-geral/cidadaos-resumo", async (req, res) => {
     res.status(500).json({ error: "Falha ao carregar resumo de cidadãos" });
   }
 });
-
 
 app.get("/api/visao-geral/evolucao-uso", async (req, res) => {
   try {
@@ -543,7 +325,6 @@ app.get("/api/visao-geral/evolucao-uso", async (req, res) => {
   }
 });
 
-
 app.get("/api/visao-geral/contadores", async (req, res) => {
   try {
     const sql = `
@@ -583,6 +364,8 @@ app.get("/api/visao-geral/contadores", async (req, res) => {
     const params = [TENANT_ID, TENANT_ID, TENANT_ID, TENANT_ID, TENANT_ID, TENANT_ID];
     const [rows] = await db.query(sql, params);
 
+    res.setHeader("Cache-Control", "public, max-age=60");
+    res.setHeader("Cache-Control", "public, max-age=60");
     res.json(rows[0] || {});
 
   } catch (err) {
@@ -590,7 +373,6 @@ app.get("/api/visao-geral/contadores", async (req, res) => {
     res.status(500).json({ error: "Falha ao carregar contadores" });
   }
 });
-
 
 app.get("/api/resumo-periodo", async (req, res) => {
   try {
@@ -700,7 +482,6 @@ app.get("/api/resumo-periodo", async (req, res) => {
   }
 });
 
-
 app.get("/api/setores", async (req, res) => {
   try {
     const [rows] = await db.query(`
@@ -801,7 +582,6 @@ app.get("/api/setores", async (req, res) => {
   }
 });
 
-
 app.get("/api/setores-usuarios-resumo", async (req, res) => {
   try {
     const sql = `
@@ -827,7 +607,6 @@ app.get("/api/setores-usuarios-resumo", async (req, res) => {
     res.status(500).json({ error: "Erro ao carregar resumo" });
   }
 });
-
 
 app.get("/api/setores/:id/usuarios", async (req, res) => {
   try {
@@ -986,7 +765,6 @@ app.get("/api/setores-consolidado", async (req, res) => {
     res.status(500).json({ error: "Erro ao carregar consolidado" });
   }
 });
-
 
 app.get("/api/usuarios/lista", async (req, res) => {
   try {
@@ -1172,7 +950,6 @@ app.get("/api/usuarios/ranking", async (req, res) => {
   }
 });
 
-
 app.get("/api/usuarios/detalhes", async (req, res) => {
   try {
     const inicio = req.query.inicio || null;
@@ -1275,7 +1052,6 @@ ORDER BY ud.ultimo_despacho DESC
   }
 });
 
-
 app.get("/api/solicitacoes/resumo", async (req, res) => {
   try {
     let { inicio, fim, setor, servico } = req.query;
@@ -1309,12 +1085,13 @@ app.get("/api/solicitacoes/resumo", async (req, res) => {
 
     const [rows] = await db.query(
       `
-      SELECT
-          COUNT(*) AS total,
-          SUM(CASE WHEN s.status = 0 THEN 1 ELSE 0 END) AS iniciadas,
-          SUM(CASE WHEN s.status = 2 THEN 1 ELSE 0 END) AS espera,
-          SUM(CASE WHEN s.status = 3 THEN 1 ELSE 0 END) AS respondidas,
-          SUM(CASE WHEN s.status = 1 THEN 1 ELSE 0 END) AS concluidas
+   SELECT 
+        COUNT(*) AS total,
+        SUM(CASE WHEN s.status = 0 THEN 1 ELSE 0 END) AS iniciadas,
+        SUM(CASE WHEN s.status = 2 THEN 1 ELSE 0 END) AS espera,
+        SUM(CASE WHEN s.status = 3 THEN 1 ELSE 0 END) AS respondidas,
+        -- Concluídas + Transferidas (status 1 e 4)
+        SUM(CASE WHEN s.status IN (1,4) THEN 1 ELSE 0 END) AS concluidas
       FROM jp_conectada.solicitations s
       WHERE ${where}
       `,
@@ -1329,33 +1106,480 @@ app.get("/api/solicitacoes/resumo", async (req, res) => {
   }
 });
 
-app.get("/api/solicitacoes/lista", async (req, res) => {
+app.get("/api/solicitacoes/resumo", async (req, res) => {
   try {
-    let { inicio, fim, setor, servico } = req.query;
+    const { where, params } = buildSolicitacoesWhere(req);
 
-    let where = `s.tenant_id = 1 AND s.deleted_at IS NULL`;
+    const [rows] = await db.execute(
+      `
+      SELECT 
+        COUNT(*) AS total,
+        SUM(CASE WHEN s.status = 0 THEN 1 ELSE 0 END) AS iniciadas,
+        SUM(CASE WHEN s.status = 2 THEN 1 ELSE 0 END) AS espera,
+        SUM(CASE WHEN s.status = 3 THEN 1 ELSE 0 END) AS respondidas,
+        SUM(CASE WHEN s.status = 1 THEN 1 ELSE 0 END) AS concluidas
+      FROM jp_conectada.solicitations s
+      WHERE ${where}
+    `,
+      params
+    );
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("Erro no resumo:", err);
+    res.status(500).json({ error: "Erro ao carregar resumo" });
+  }
+});
+
+
+app.get("/api/solicitacoes/setores", async (req, res) => {
+  try {
+    const [rows] = await db.execute(`
+      SELECT 
+        s.id AS sector_id,
+        s.title AS name,
+
+        -- serviços primários vinculados ao setor
+        (
+          SELECT COUNT(*)
+          FROM jp_conectada.service_sector ss
+          WHERE ss.sector_id = s.id
+            AND ss.primary = 1
+        ) AS total_servicos,
+
+        -- solicitações associadas ao setor (via serviço primário)
+        (
+          SELECT COUNT(*)
+          FROM jp_conectada.solicitations sol
+          JOIN jp_conectada.service_sector ss2 
+               ON ss2.service_id = sol.service_id
+              AND ss2.primary = 1
+          WHERE ss2.sector_id = s.id
+            AND sol.tenant_id = 1
+            AND sol.deleted_at IS NULL
+        ) AS total_solicitacoes
+
+      FROM jp_conectada.sectors s
+      WHERE s.tenant_id = 1
+        AND s.active = 1
+      ORDER BY s.title
+    `);
+
+    // Filtra setores inválidos no backend (rápido e evita lógica extra no front)
+    const filtrados = rows.filter(
+      r => (r.total_servicos ?? 0) > 0 || (r.total_solicitacoes ?? 0) > 0
+    );
+
+    res.json(filtrados);
+
+  } catch (err) {
+    console.error("Erro ao carregar setores filtrados:", err);
+    res.status(500).json({ error: "Erro ao carregar setores" });
+  }
+});
+
+app.get("/api/solicitacoes/setores-filtrados", async (req, res) => {
+  try {
+    const q = (req.query.q || "").toString().toLowerCase().trim();
+
+    /* -----------------------------------------------
+       1) Buscar setores que têm serviços primários
+    ----------------------------------------------- */
+    const [setoresServicos] = await db.query(
+      `
+      SELECT DISTINCT 
+        s.id AS sector_id,
+        s.title AS name
+      FROM jp_conectada.sectors s
+      JOIN jp_conectada.service_sector ss 
+           ON ss.sector_id = s.id 
+          AND ss.primary = 1
+      JOIN jp_conectada.services sv 
+           ON sv.id = ss.service_id 
+          AND sv.active = 1
+      WHERE s.tenant_id = 1
+        AND s.active = 1
+      ORDER BY s.title
+      `
+    );
+
+    /* -----------------------------------------------
+       2) Buscar setores que têm solicitações ativas
+    ----------------------------------------------- */
+    const [setoresSolicitacoes] = await db.query(
+      `
+      SELECT DISTINCT 
+        s.id AS sector_id,
+        s.title AS name
+      FROM jp_conectada.solicitations sol
+      JOIN jp_conectada.service_sector ss 
+           ON ss.service_id = sol.service_id 
+          AND ss.primary = 1
+      JOIN jp_conectada.sectors s 
+           ON s.id = ss.sector_id
+      WHERE sol.tenant_id = 1
+        AND sol.deleted_at IS NULL
+        AND s.active = 1
+      ORDER BY s.title
+      `
+    );
+
+    /* -----------------------------------------------
+       3) Unificar e remover duplicados
+    ----------------------------------------------- */
+    const mapa = new Map();
+
+    [...setoresServicos, ...setoresSolicitacoes].forEach(s => {
+      mapa.set(s.sector_id, s);
+    });
+
+    let listaFinal = Array.from(mapa.values());
+
+    /* -----------------------------------------------
+       4) Aplicar filtro de texto (opcional)
+    ----------------------------------------------- */
+    if (q.length > 0) {
+      listaFinal = listaFinal.filter(s =>
+        s.name.toLowerCase().includes(q)
+      );
+    }
+
+    res.json(listaFinal);
+
+  } catch (err) {
+    console.error("Erro /solicitacoes/setores-filtrados:", err);
+    res.status(500).json({ error: "Erro ao buscar setores filtrados" });
+  }
+});
+
+app.get("/api/solicitacoes/lista-paginada", async (req, res) => {
+  try {
+    const {
+      offset = 0,
+      limit = 50,
+      setor = "",
+      servico = "",
+      inicio = "",
+      fim = ""
+    } = req.query;
+
     const params = [];
+    let where = `
+      s.tenant_id = 1
+      AND s.deleted_at IS NULL
+    `;
 
+    // Período
     if (inicio && fim) {
-      where += " AND DATE(s.created_at) BETWEEN ? AND ?";
+      where += ` AND DATE(s.created_at) BETWEEN ? AND ?`;
       params.push(inicio, fim);
     }
 
+    // Filtro por setor (considera serviço primário)
     if (setor) {
       where += `
         AND EXISTS (
-          SELECT 1 
+          SELECT 1
           FROM jp_conectada.service_sector ss
           WHERE ss.service_id = s.service_id
             AND ss.sector_id = ?
-        )`;
+            AND ss.primary = 1
+        )
+      `;
       params.push(setor);
     }
 
+    // Filtro por serviço
     if (servico) {
-      where += " AND s.service_id = ?";
+      where += ` AND s.service_id = ?`;
       params.push(servico);
     }
+
+    // Consulta paginada
+    const [rows] = await db.execute(
+      `
+      SELECT
+        s.id,
+        s.created_at,
+        s.protocol,
+        s.status,
+        s.citizen_name AS cidadao,
+
+        sv.name AS servico,
+
+        sec.title AS setor,
+        sec.id AS sector_id
+
+      FROM jp_conectada.solicitations s
+      LEFT JOIN jp_conectada.services sv ON sv.id = s.service_id
+      LEFT JOIN jp_conectada.service_sector ss2 
+             ON ss2.service_id = s.service_id 
+            AND ss2.primary = 1
+      LEFT JOIN jp_conectada.sectors sec ON sec.id = ss2.sector_id
+
+      WHERE ${where}
+
+      ORDER BY s.created_at DESC
+      LIMIT ?, ?
+      `,
+      [...params, Number(offset), Number(limit)]
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro ao carregar lista paginada:", err);
+    res.status(500).json({ error: "Erro ao carregar lista paginada" });
+  }
+});
+
+app.get("/api/solicitacoes/servicos", async (req, res) => {
+  try {
+    const [rows] = await db.execute(`
+      SELECT id AS service_id, title as name
+      FROM jp_conectada.services
+      WHERE tenant_id = 1
+      and active =  1 
+      ORDER BY title
+    `);
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro ao carregar serviços:", err);
+    res.status(500).json({ error: "Erro ao carregar serviços" });
+  }
+});
+
+function buildSolicitacoesWhere(req) {
+  let where = `s.tenant_id = 1 AND s.deleted_at IS NULL`;
+  const params = [];
+  const { inicio, fim, setor, servico } = req.query;
+
+  if (inicio && fim) {
+    where += " AND DATE(s.created_at) BETWEEN ? AND ?";
+    params.push(inicio, fim);
+  }
+
+  if (setor) {
+    where += `
+      AND EXISTS (
+        SELECT 1 FROM jp_conectada.service_sector ss
+        WHERE ss.service_id = s.service_id AND ss.sector_id = ?
+      )
+    `;
+    params.push(setor);
+  }
+
+  if (servico) {
+    where += " AND s.service_id = ?";
+    params.push(servico);
+  }
+
+  return { where, params };
+}
+
+app.get("/api/solicitacoes/lista", async (req, res) => {
+  try {
+    const { where, params } = buildSolicitacoesWhere(req);
+
+    const [rows] = await db.execute(
+      `
+      SELECT
+        s.id,
+        s.created_at,
+        s.protocol,
+        s.status,
+        c.name AS cidadao,
+        sv.name AS servico,
+        sec.name AS setor,
+        sec.id AS sector_id
+      FROM jp_conectada.solicitations s
+      LEFT JOIN jp_conectada.citizens c ON c.id = s.citizen_id
+      LEFT JOIN jp_conectada.services sv ON sv.id = s.service_id
+      LEFT JOIN jp_conectada.service_sector ss ON ss.service_id = s.service_id
+      LEFT JOIN jp_conectada.sectors sec ON sec.id = ss.sector_id
+      WHERE ${where}
+      ORDER BY s.created_at DESC
+    `,
+      params
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro lista de solicitações:", err);
+    res.status(500).json({ error: "Erro ao carregar lista" });
+  }
+});
+
+app.get("/api/solicitacoes/evolucao", async (req, res) => {
+  try {
+    const { where, params } = buildSolicitacoesWhere(req);
+
+    const [rows] = await db.execute(
+      `
+        SELECT 
+        DATE(s.created_at) AS data_ref,
+        COUNT(*) AS abertas,
+        -- Concluídas + Transferidas (status 1 e 4)
+        SUM(CASE WHEN s.status IN (1,4) THEN 1 ELSE 0 END) AS concluidas
+      FROM jp_conectada.solicitations s
+      WHERE ${where}
+      GROUP BY DATE(s.created_at)
+      ORDER BY DATE(s.created_at)
+
+    `,
+      params
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro evolução solicitações:", err);
+    res.status(500).json({ error: "Erro ao carregar evolução" });
+  }
+});
+
+app.get("/api/solicitacoes/setores", async (req, res) => {
+  try {
+    const [rows] = await db.execute(`
+      SELECT 
+        id AS sector_id,
+        title AS name
+      FROM jp_conectada.sectors
+      WHERE tenant_id = 1
+      ORDER BY title
+    `);
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro ao carregar setores:", err);
+    res.status(500).json({ error: "Erro ao carregar setores" });
+  }
+});
+
+app.get("/api/solicitacoes/servicos", async (req, res) => {
+  try {
+    const [rows] = await db.execute(`
+      SELECT 
+        id AS service_id,
+        title AS name
+      FROM jp_conectada.services
+      WHERE tenant_id = 1
+      AND ACTIVE = 1 
+      ORDER BY title
+    `);
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro ao carregar serviços:", err);
+    res.status(500).json({ error: "Erro ao carregar serviçosxxxx" });
+  }
+});
+
+
+function buildSolicitacoesWhere(req) {
+  let where = `s.tenant_id = 1 AND s.deleted_at IS NULL`;
+  const params = [];
+  const { inicio, fim, setor, servico } = req.query;
+
+  if (inicio && fim) {
+    where += " AND DATE(s.created_at) BETWEEN ? AND ?";
+    params.push(inicio, fim);
+  }
+
+  if (setor) {
+    where += `
+      AND EXISTS (
+        SELECT 1 FROM jp_conectada.service_sector ss
+        WHERE ss.service_id = s.service_id AND ss.sector_id = ?
+      )
+    `;
+    params.push(setor);
+  }
+
+  if (servico) {
+    where += " AND s.service_id = ?";
+    params.push(servico);
+  }
+
+  return { where, params };
+}
+
+
+//
+// 4) RESUMO DAS SOLICITAÇÕES
+//
+
+
+/* ============================================================
+   🔧 HELPER — WHERE unificado para TODAS as rotas
+============================================================ */
+function buildSolicitacoesWhere(req) {
+  let where = `s.tenant_id = 1 AND s.deleted_at IS NULL`;
+  const params = [];
+  const { inicio, fim, setor, servico } = req.query;
+
+  // Período
+  if (inicio && fim) {
+    where += " AND DATE(s.created_at) BETWEEN ? AND ?";
+    params.push(inicio, fim);
+  }
+
+  // Setor (qualquer serviço vinculado ao setor)
+  if (setor) {
+    where += `
+      AND EXISTS (
+        SELECT 1 FROM jp_conectada.service_sector ss
+        WHERE ss.service_id = s.service_id
+          AND ss.sector_id = ?
+      )
+    `;
+    params.push(setor);
+  }
+
+  // Serviço
+  if (servico) {
+    where += " AND s.service_id = ?";
+    params.push(servico);
+  }
+
+  return { where, params };
+}
+
+/* ============================================================
+   1) RESUMO (KPIs)
+============================================================ */
+app.get("/api/solicitacoes/resumo", async (req, res) => {
+  try {
+    const { where, params } = buildSolicitacoesWhere(req);
+
+    const [rows] = await db.query(
+      `
+      SELECT 
+        COUNT(*) AS total,
+        SUM(CASE WHEN s.status = 0 THEN 1 ELSE 0 END) AS iniciadas,
+        SUM(CASE WHEN s.status = 2 THEN 1 ELSE 0 END) AS espera,
+        SUM(CASE WHEN s.status = 3 THEN 1 ELSE 0 END) AS respondidas,
+        /* concluídas + transferidas */
+        SUM(CASE WHEN s.status IN (1,4) THEN 1 ELSE 0 END) AS concluidas
+      FROM jp_conectada.solicitations s
+      WHERE ${where}
+      `,
+      params
+    );
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("Erro resumo solicitações:", err);
+    res.status(500).json({ error: "Erro ao carregar resumo" });
+  }
+});
+
+
+/* ============================================================
+   2) LISTA DETALHADA
+============================================================ */
+app.get("/api/solicitacoes/lista", async (req, res) => {
+  try {
+    const { where, params } = buildSolicitacoesWhere(req);
 
     const [rows] = await db.query(
       `
@@ -1366,12 +1590,13 @@ app.get("/api/solicitacoes/lista", async (req, res) => {
         s.status,
         c.name AS cidadao,
         sv.title AS servico,
-        sec.title AS setor
+        sec.title AS setor,
+        sec.id AS sector_id
       FROM jp_conectada.solicitations s
       LEFT JOIN jp_conectada.citizens c ON c.id = s.citizen_id
       LEFT JOIN jp_conectada.services sv ON sv.id = s.service_id
-      LEFT JOIN jp_conectada.service_sector ss 
-             ON ss.service_id = s.service_id AND ss.primary = 1
+      /* SOMENTE O SETOR PRIMÁRIO */
+      LEFT JOIN jp_conectada.service_sector ss ON ss.service_id = s.service_id AND ss.primary = 1
       LEFT JOIN jp_conectada.sectors sec ON sec.id = ss.sector_id
       WHERE ${where}
       ORDER BY s.created_at DESC
@@ -1380,58 +1605,532 @@ app.get("/api/solicitacoes/lista", async (req, res) => {
     );
 
     res.json(rows);
-
   } catch (err) {
-    console.error("Erro /solicitacoes/lista:", err);
+    console.error("Erro lista solicitações:", err);
     res.status(500).json({ error: "Erro ao buscar lista" });
+  }
+});
+
+
+/* ============================================================
+   3) EVOLUÇÃO — Abertas x Concluídas
+============================================================ */
+app.get("/api/solicitacoes/evolucao", async (req, res) => {
+  try {
+    const { where, params } = buildSolicitacoesWhere(req);
+
+    const [rows] = await db.query(
+      `
+      SELECT
+        DATE(s.created_at) AS data_ref,
+        COUNT(*) AS abertas,
+        SUM(CASE WHEN s.status IN (1,4) THEN 1 ELSE 0 END) AS concluidas
+      FROM jp_conectada.solicitations s
+      WHERE ${where}
+      GROUP BY DATE(s.created_at)
+      ORDER BY DATE(s.created_at)
+      `,
+      params
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro evolução solicitações:", err);
+    res.status(500).json({ error: "Erro ao carregar evolução" });
+  }
+});
+
+
+/* ============================================================
+   4) SETORES PARA FILTRO
+============================================================ */
+app.get("/api/solicitacoes/setores", async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT id AS sector_id, title AS name
+      FROM jp_conectada.sectors
+      WHERE tenant_id = 1 AND active = 1
+      ORDER BY title
+    `);
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro carregar setores:", err);
+    res.status(500).json({ error: "Erro ao carregar setores" });
+  }
+});
+
+
+/* ============================================================
+   5) SERVIÇOS PARA FILTRO
+============================================================ */
+app.get("/api/solicitacoes/servicos", async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT id AS service_id, title AS name
+      FROM jp_conectada.services
+      WHERE tenant_id = 1 AND active = 1
+      ORDER BY title
+    `);
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro carregar serviços:", err);
+    res.status(500).json({ error: "Erro ao carregar serviços" });
+  }
+});
+
+
+/* ============================================================
+   6) SERVIÇOS POR SETOR
+============================================================ */
+app.get("/api/solicitacoes/servicos-por-setor", async (req, res) => {
+  try {
+    const setor = req.query.setor;
+    if (!setor) return res.json([]);
+
+    const [rows] = await db.query(
+      `
+      SELECT DISTINCT s.id AS service_id, s.title AS name
+      FROM jp_conectada.services s
+      JOIN jp_conectada.service_sector ss ON ss.service_id = s.id
+      WHERE ss.sector_id = ?
+      ORDER BY s.title
+      `,
+      [setor]
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro serviços por setor:", err);
+    res.status(500).json({ error: "Erro ao carregar lista de serviços" });
+  }
+});
+
+
+
+//
+// 5) LISTA DAS SOLICITAÇÕES
+//
+app.get("/api/solicitacoes/lista", async (req, res) => {
+  try {
+    const { where, params } = buildSolicitacoesWhere(req);
+
+    const [rows] = await db.execute(
+      `
+      SELECT
+        s.id,
+        s.created_at,
+        s.protocol,
+        s.status,
+        c.name AS cidadao,
+        sv.title AS servico,
+        sec.title AS setor,
+        sec.id AS sector_id
+      FROM jp_conectada.solicitations s
+      LEFT JOIN jp_conectada.citizens c ON c.id = s.citizen_id
+      LEFT JOIN jp_conectada.services sv ON sv.id = s.service_id
+      LEFT JOIN jp_conectada.service_sector ss ON ss.service_id = s.service_id
+      LEFT JOIN jp_conectada.sectors sec ON sec.id = ss.sector_id
+      WHERE ${where}
+      ORDER BY s.created_at DESC
+    `,
+      params
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro na lista:", err);
+    res.status(500).json({ error: "Erro ao carregar lista" });
+  }
+});
+
+
+//
+// 6) GRÁFICO DE EVOLUÇÃO (Abertas x Concluídas)
+//
+app.get("/api/solicitacoes/evolucao", async (req, res) => {
+  try {
+    const { where, params } = buildSolicitacoesWhere(req);
+
+    const [rows] = await db.execute(
+      `
+      SELECT 
+        DATE(s.created_at) AS data_ref,
+        COUNT(*) AS abertas,
+        SUM(CASE WHEN s.status = 1 THEN 1 ELSE 0 END) AS concluidas
+      FROM jp_conectada.solicitations s
+      WHERE ${where}
+      GROUP BY DATE(s.created_at)
+      ORDER BY DATE(s.created_at)
+    `,
+      params
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro na evolução:", err);
+    res.status(500).json({ error: "Erro ao carregar evolução" });
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+/* ============================================================
+   📌 ROTA — Novos usuários nos últimos 12 meses
+   Retorna todos os meses, mesmo sem resultados.
+============================================================ */
+app.get("/api/usuarios/novos-12m", async (req, res) => {
+  try {
+    const hoje = new Date();
+    const anoAtual = hoje.getFullYear();
+    const mesAtual = hoje.getMonth() + 1; // 1–12
+
+    // Lista dos últimos 12 meses
+    const meses = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      const ano = d.getFullYear();
+      const mes = String(d.getMonth() + 1).padStart(2, "0");
+
+      meses.push({
+        chave: `${ano}-${mes}`,
+        ano,
+        mes
+      });
+    }
+
+    const [rows] = await db.query(
+      `
+      SELECT 
+        DATE_FORMAT(created_at, '%Y-%m') AS ym,
+        COUNT(*) AS total
+      FROM jp_conectada.users
+      WHERE tenant_id = ?
+        AND active = 1
+        AND created_at >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+      GROUP BY ym
+      ORDER BY ym
+      `,
+      [TENANT_ID]
+    );
+
+    const mapa = {};
+    rows.forEach(r => (mapa[r.ym] = r.total));
+
+    const resultado = meses.map(m => ({
+      mes: m.chave,
+      total: mapa[m.chave] ?? 0
+    }));
+
+    res.json(resultado);
+  } catch (err) {
+    console.error("Erro /usuarios/novos-12m:", err);
+    res.status(500).json({ error: true });
+  }
+});
+
+/* ============================================================
+   📌 ROTA — Novos usuários nos últimos 12 meses
+   Retorna todos os meses, mesmo sem resultados.
+============================================================ */
+app.get("/api/usuarios/novos-12m", async (req, res) => {
+  try {
+    const hoje = new Date();
+    const anoAtual = hoje.getFullYear();
+    const mesAtual = hoje.getMonth() + 1; // 1–12
+
+    // Lista dos últimos 12 meses
+    const meses = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      const ano = d.getFullYear();
+      const mes = String(d.getMonth() + 1).padStart(2, "0");
+
+      meses.push({
+        chave: `${ano}-${mes}`,
+        ano,
+        mes
+      });
+    }
+
+    const [rows] = await db.query(
+      `
+      SELECT 
+        DATE_FORMAT(created_at, '%Y-%m') AS ym,
+        COUNT(*) AS total
+      FROM jp_conectada.users
+      WHERE tenant_id = ?
+        AND active = 1
+        AND created_at >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+      GROUP BY ym
+      ORDER BY ym
+      `,
+      [TENANT_ID]
+    );
+
+    const mapa = {};
+    rows.forEach(r => (mapa[r.ym] = r.total));
+
+    const resultado = meses.map(m => ({
+      mes: m.chave,
+      total: mapa[m.chave] ?? 0
+    }));
+
+    res.json(resultado);
+  } catch (err) {
+    console.error("Erro /usuarios/novos-12m:", err);
+    res.status(500).json({ error: true });
   }
 });
 
 
 app.get("/api/solicitacoes/bairros-top6", async (req, res) => {
   try {
-    const ano = req.query.ano || new Date().getFullYear();
+    const ano = Number(req.query.ano) || new Date().getFullYear();
+    const { start, end } = dateRangeForYear(ano);
+    const key = `bairros-top6:${ano}`;
+    const payload = await withCache(key, 60000, async () => {
+      const [top] = await db.query(
+        `
+        SELECT neighborhood AS bairro, COUNT(*) AS total
+        FROM jp_conectada.solicitations
+        WHERE tenant_id = ?
+          AND neighborhood IS NOT NULL
+          AND created_at BETWEEN ? AND ?
+        GROUP BY bairro
+        ORDER BY total DESC
+        LIMIT 6
+        `,
+        [TENANT_ID, start, end]
+      );
 
-    const [top] = await db.query(
-      `
-      SELECT neighborhood AS bairro, COUNT(*) AS total
-      FROM jp_conectada.solicitations
-      WHERE tenant_id = ?
-        AND neighborhood IS NOT NULL
-        AND YEAR(created_at) = ?
-      GROUP BY bairro
-      ORDER BY total DESC
-      LIMIT 6
-      `,
-      [TENANT_ID, ano]
-    );
+      if (top.length === 0) return [];
+      const bairros = top.map(b => b.bairro);
+      const [evolucao] = await db.query(
+        `
+        SELECT neighborhood AS bairro,
+               MONTH(created_at) AS mes,
+               COUNT(*) AS total
+        FROM jp_conectada.solicitations
+        WHERE tenant_id = ?
+          AND neighborhood IN (?)
+          AND created_at BETWEEN ? AND ?
+        GROUP BY bairro, mes
+        ORDER BY mes ASC
+        `,
+        [TENANT_ID, bairros, start, end]
+      );
+      return { bairros: top, meses: evolucao };
+    });
 
-    if (top.length === 0) return res.json([]);
-
-    const bairros = top.map(b => b.bairro);
-
-    const [evolucao] = await db.query(
-      `
-      SELECT neighborhood AS bairro,
-             MONTH(created_at) AS mes,
-             COUNT(*) AS total
-      FROM jp_conectada.solicitations
-      WHERE tenant_id = ?
-        AND neighborhood IN (?)
-        AND YEAR(created_at) = ?
-      GROUP BY bairro, mes
-      ORDER BY mes ASC
-      `,
-      [TENANT_ID, bairros, ano]
-    );
-
-    res.json({ bairros: top, meses: evolucao });
+    res.setHeader("Cache-Control", "public, max-age=60");
+    res.json(payload);
 
   } catch (err) {
     console.error("Erro bairros top6:", err);
     res.status(500).json({ error: "Erro ao buscar bairros" });
   }
 });
+
+
+app.get("/api/solicitacoes/evolucao", async (req, res) => {
+  try {
+    let { inicio, fim, setor, servico } = req.query;
+
+    let where = `s.tenant_id = 1 AND s.deleted_at IS NULL`;
+    const params = [];
+
+    // FILTRO PERÍODO
+    if (inicio && fim) {
+      where += " AND DATE(s.created_at) BETWEEN ? AND ? ";
+      params.push(inicio, fim);
+    }
+
+    // FILTRO SETOR
+    if (setor) {
+      where += `
+        AND EXISTS (
+          SELECT 1 
+            FROM jp_conectada.service_sector ss 
+           WHERE ss.service_id = s.service_id
+             AND ss.sector_id = ?
+        )`;
+      params.push(setor);
+    }
+
+    // FILTRO SERVIÇO
+    if (servico) {
+      where += " AND s.service_id = ?";
+      params.push(servico);
+    }
+
+    const [rows] = await db.query(
+      `
+      SELECT
+          DATE(s.created_at) AS data_ref,
+          COUNT(*) AS abertas,
+          SUM(CASE WHEN s.status = 1 THEN 1 ELSE 0 END) AS concluidas
+      FROM jp_conectada.solicitations s
+      WHERE ${where}
+      GROUP BY DATE(s.created_at)
+      ORDER BY DATE(s.created_at) ASC
+      `,
+      params
+    );
+
+    res.json(rows);
+
+  } catch (err) {
+    console.error("Erro /solicitacoes/evolucao:", err);
+    res.status(500).json({ error: "Erro ao buscar evolução" });
+  }
+});
+
+app.get("/api/solicitacoes/setor/evolucao", async (req, res) => {
+  try {
+    let { setor, inicio, fim } = req.query;
+
+    if (!setor) {
+      return res.status(400).json({ error: "setor é obrigatório" });
+    }
+
+    let where = `
+      s.tenant_id = 1
+      AND s.deleted_at IS NULL
+      AND EXISTS (
+        SELECT 1 FROM jp_conectada.service_sector ss
+        WHERE ss.service_id = s.service_id
+          AND ss.sector_id = ?
+      )
+    `;
+    const params = [setor];
+
+    if (inicio && fim) {
+      where += " AND DATE(s.created_at) BETWEEN ? AND ? ";
+      params.push(inicio, fim);
+    }
+
+    const [rows] = await db.query(
+      `
+      SELECT
+        MONTH(s.created_at) AS mes,
+        COUNT(*) AS abertas,
+        SUM(CASE WHEN s.status = 1 THEN 1 ELSE 0 END) AS concluidas
+      FROM jp_conectada.solicitations s
+      WHERE ${where}
+      GROUP BY MONTH(s.created_at)
+      ORDER BY mes ASC
+      `,
+      params
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro /solicitacoes/setor/evolucao:", err);
+    res.status(500).json({ error: "Erro ao buscar evolução do setor" });
+  }
+});
+
+app.get("/api/solicitacoes/setor/status", async (req, res) => {
+  try {
+    let { setor, inicio, fim } = req.query;
+
+    if (!setor) {
+      return res.status(400).json({ error: "setor é obrigatório" });
+    }
+
+    let where = `
+      s.tenant_id = 1
+      AND s.deleted_at IS NULL
+      AND EXISTS (
+        SELECT 1 FROM jp_conectada.service_sector ss
+        WHERE ss.service_id = s.service_id
+          AND ss.sector_id = ?
+      )
+    `;
+    const params = [setor];
+
+    if (inicio && fim) {
+      where += " AND DATE(s.created_at) BETWEEN ? AND ? ";
+      params.push(inicio, fim);
+    }
+
+    const [rows] = await db.query(
+      `
+      SELECT
+        SUM(CASE WHEN s.status = 0 THEN 1 ELSE 0 END) AS iniciadas,
+        SUM(CASE WHEN s.status = 2 THEN 1 ELSE 0 END) AS espera,
+        SUM(CASE WHEN s.status = 3 THEN 1 ELSE 0 END) AS respondidas,
+        SUM(CASE WHEN s.status = 1 THEN 1 ELSE 0 END) AS concluidas
+      FROM jp_conectada.solicitations s
+      WHERE ${where}
+      `,
+      params
+    );
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("Erro /solicitacoes/setor/status:", err);
+    res.status(500).json({ error: "Erro ao buscar status do setor" });
+  }
+});
+
+
+app.get("/api/solicitacoes/setor/top-servicos", async (req, res) => {
+  try {
+    let { setor, inicio, fim } = req.query;
+
+    if (!setor) {
+      return res.status(400).json({ error: "setor é obrigatório" });
+    }
+
+    let where = `
+      s.tenant_id = 1
+      AND s.deleted_at IS NULL
+      AND EXISTS (
+        SELECT 1 FROM jp_conectada.service_sector ss
+        WHERE ss.service_id = s.service_id
+          AND ss.sector_id = ?
+      )
+    `;
+    const params = [setor];
+
+    if (inicio && fim) {
+      where += " AND DATE(s.created_at) BETWEEN ? AND ? ";
+      params.push(inicio, fim);
+    }
+
+    const [rows] = await db.query(
+      `
+      SELECT
+        sv.title AS servico,
+        COUNT(*) AS total
+      FROM jp_conectada.solicitations s
+      LEFT JOIN jp_conectada.services sv ON sv.id = s.service_id
+      WHERE ${where}
+      GROUP BY sv.title
+      ORDER BY total DESC
+      LIMIT 10
+      `,
+      params
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro /solicitacoes/setor/top-servicos:", err);
+    res.status(500).json({ error: "Erro ao buscar serviços por setor" });
+  }
+});
+
 
 
 app.get("/api/indicadores-periodo/servicos", async (req, res) => {
@@ -1497,7 +2196,6 @@ app.get("/api/indicadores-periodo/setores", async (req, res) => {
     res.status(500).json({ error: "Erro ao buscar setores" });
   }
 });
-
 
 app.get("/api/indicadores/taxa-resolucao", async (req, res) => {
   try {
@@ -1582,11 +2280,11 @@ app.get("/api/indicadores/taxa-resolucao", async (req, res) => {
 });
 
 
-
-
 app.get("/api/economometro", async (req, res) => {
   try {
     const periodo = req.query.periodo || "ano";
+    const key = `economometro:${periodo}`;
+    const data = await withCache(key, 60000, async () => {
 
     const hoje = new Date();
     let inicio = new Date(hoje);
@@ -1632,7 +2330,7 @@ app.get("/api/economometro", async (req, res) => {
     const folhas = (totalSolic * 0.65) + (totalTram * 0.20);
     const arvores = folhas / 8000;
 
-    res.json({
+    const result = {
       periodo,
       intervalo: { inicio: inicioISO, fim: fimISO },
       solicitacoes: totalSolic,
@@ -1640,7 +2338,12 @@ app.get("/api/economometro", async (req, res) => {
       folhas: Math.round(folhas),
       arvores: arvores.toFixed(3),
       dinheiro: (folhas * custoPagina).toFixed(2)
+    };
+    return result;
     });
+
+    res.setHeader("Cache-Control", "public, max-age=60");
+    res.json(data);
 
   } catch (err) {
     console.error("Erro economometro:", err);
@@ -1775,7 +2478,8 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`, {
     env: process.env.NODE_ENV || "development"
   });
-});app.use((req, res) => {
-  logger.error("rota não encontrada", { path: req.originalUrl });
+});
+
+app.use((req, res) => {
   res.status(404).json({ error: "Rota não encontrada" });
 });

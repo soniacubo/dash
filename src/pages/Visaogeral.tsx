@@ -239,164 +239,131 @@ const [taxaResolucaoCaixa, setTaxaResolucaoCaixa] = useState<{
 
   /** ----------------- CARREGAR CONTADORES ----------------- */
   useEffect(() => {
+    const ac = new AbortController();
     async function carregarContadores() {
-      const r = await fetch(`${API_BASE_URL}/visao-geral/contadores`);
-      const k = await r.json();
-      setKpis(k || {});
+      try {
+        const r = await fetch(`${API_BASE_URL}/visao-geral/contadores`, { signal: ac.signal });
+        if (!r.ok) return;
+        const k = await r.json();
+        setKpis(k || {});
+      } catch {}
     }
-
     carregarContadores();
+    return () => ac.abort();
   }, []);
 
   /** ----------------- GRÁFICO: EVOLUÇÃO DE USO ----------------- */
   useEffect(() => {
+    const ac = new AbortController();
     async function evolucao() {
-      const r = await fetch(`${API_BASE_URL}/visao-geral/evolucao-uso`);
-      const data = await r.json();
+      try {
+        const r = await fetch(`${API_BASE_URL}/visao-geral/evolucao-uso`, { signal: ac.signal });
+        if (!r.ok) return;
+        const data = await r.json();
 
-      if (!evolucaoRef.current) return;
+        if (!evolucaoRef.current) return;
 
-      const labels = data.map((d: any) => {
-        const dt = new Date(`${d.mes_iso}T00:00:00`);
-        return new Intl.DateTimeFormat("pt-BR", {
-          month: "short",
-        })
-          .format(dt)
-          .replace(".", "");
-      });
+        const labels = data.map((d: any) => {
+          const dt = new Date(`${d.mes_iso}T00:00:00`);
+          return new Intl.DateTimeFormat("pt-BR", {
+            month: "short",
+          })
+            .format(dt)
+            .replace(".", "");
+        });
 
-      const abertas = data.map((d: any) => Number(d.abertas || 0));
-      const concluidas = data.map((d: any) => Number(d.concluidas || 0));
+        const abertas = data.map((d: any) => Number(d.abertas || 0));
+        const concluidas = data.map((d: any) => Number(d.concluidas || 0));
 
-      if (evolucaoChartRef.current) evolucaoChartRef.current.destroy();
+        if (evolucaoChartRef.current) evolucaoChartRef.current.destroy();
 
-      evolucaoChartRef.current = new Chart(evolucaoRef.current, {
-        type: "line",
-        data: {
-          labels,
-          datasets: [
-            {
-              label: "Abertas",
-              data: abertas,
-              borderColor: "#2563eb",
-              backgroundColor: "rgba(37,99,235,.12)",
-              borderWidth: 2,
-              pointRadius: 2,
-              tension: 0.25,
-            },
-            {
-              label: "Concluídas",
-              data: concluidas,
-              borderColor: "#10b981",
-              backgroundColor: "rgba(16,185,129,.12)",
-              borderWidth: 2,
-              pointRadius: 2,
-              tension: 0.25,
-              hidden: true,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { position: "bottom" } },
-          scales: {
-            x: { grid: { display: false } },
-            y: { beginAtZero: true },
+        evolucaoChartRef.current = new Chart(evolucaoRef.current, {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "Abertas",
+                data: abertas,
+                borderColor: "#2563eb",
+                backgroundColor: "rgba(37,99,235,.12)",
+                borderWidth: 2,
+                pointRadius: 2,
+                tension: 0.25,
+              },
+              {
+                label: "Concluídas",
+                data: concluidas,
+                borderColor: "#10b981",
+                backgroundColor: "rgba(16,185,129,.12)",
+                borderWidth: 2,
+                pointRadius: 2,
+                tension: 0.25,
+                hidden: true,
+              },
+            ],
           },
-        },
-      });
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: "bottom" } },
+            scales: {
+              x: { grid: { display: false } },
+              y: { beginAtZero: true },
+            },
+          },
+        });
+      } catch (err: any) {
+        if (err?.name !== "AbortError") {
+          console.error("Erro gráfico evolução:", err);
+        }
+      }
     }
 
     evolucao();
     return () => {
       if (evolucaoChartRef.current) evolucaoChartRef.current.destroy();
+      ac.abort();
     };
   }, []);
 
-  // /** ----------------- GRÁFICO: PERFIL (SERVIDORES x CIDADÃOS x REPRESENTANTES) ----------------- */
-  // useEffect(() => {
-  //   async function perfis() {
-  //     const r = await fetch(`${API_BASE_URL}/visao-geral/contadores`);
-  //     const k = await r.json();
-  //     if (!perfilRef.current) return;
-
-  //     const servidores = Number(k.total_usuarios || 0);
-  //     const cidadaos = Number(k.total_cidadaos || 0);
-  //     const representantes = 45000; // mock temporário
-
-  //     const raw = [servidores, cidadaos, representantes];
-  //     const display = raw.map((v) => Math.sqrt(Math.max(1, v)));
-
-  //     if (perfilChartRef.current) perfilChartRef.current.destroy();
-
-  //     perfilChartRef.current = new Chart(perfilRef.current, {
-  //       type: "doughnut",
-  //       data: {
-  //         labels: ["Servidores", "Cidadãos", "Representantes"],
-  //         datasets: [
-  //           {
-  //             data: display,
-  //             backgroundColor: ["#2563eb", "#60a5fa", "#93c5fd"],
-  //             borderColor: "#ffffff",
-  //             borderWidth: 2,
-  //             offset: display.map((_, i) => (i === 0 ? 8 : 0)),
-  //             hoverOffset: 10,
-  //           },
-  //         ],
-  //       },
-  //       options: {
-  //         responsive: true,
-  //         maintainAspectRatio: false,
-  //         cutout: "45%",
-  //         plugins: {
-  //           legend: { position: "bottom" },
-  //           tooltip: {
-  //             callbacks: {
-  //               label: (ctx: any) => {
-  //                 const idx = ctx.dataIndex ?? 0;
-  //                 const val = raw[idx] ?? 0;
-  //                 return `${ctx.label}: ${fmt.format(Number(val || 0))}`;
-  //               },
-  //             },
-  //           },
-  //         },
-  //       },
-  //     });
-  //   }
-
-  //   perfis();
-  //   return () => {
-  //     if (perfilChartRef.current) perfilChartRef.current.destroy();
-  //   };
-  // }, [fmt]);
-
   /** ----------------- ECONÔMETRO ----------------- */
   useEffect(() => {
+    const ac = new AbortController();
     async function carregarEconomometro() {
-      const r = await fetch(
-        `${API_BASE_URL}/economometro?periodo=${ecoPeriodo}`
-      );
-      const data = await r.json();
+      try {
+        const r = await fetch(
+          `${API_BASE_URL}/economometro?periodo=${ecoPeriodo}`,
+          { signal: ac.signal }
+        );
+        if (!r.ok) return;
+        const data = await r.json();
 
-      const folhas = Number(data.folhas || 0);
-      const arvores = String(data.arvores || "0.000");
-      const dinheiro = String(data.dinheiro || "0.00");
+        const folhas = Number(data.folhas || 0);
+        const arvores = String(data.arvores || "0.000");
+        const dinheiro = String(data.dinheiro || "0.00");
 
-      setEconomometro({
-        folhas: Math.round(folhas),
-        arvores,
-        dinheiro,
-      });
+        setEconomometro({
+          folhas: Math.round(folhas),
+          arvores,
+          dinheiro,
+        });
+      } catch (err: any) {
+        if (err?.name !== "AbortError") {
+          console.error("Erro economometro:", err);
+        }
+      }
     }
     carregarEconomometro();
+    return () => ac.abort();
   }, [ecoPeriodo]);
 
   /** ----------------- GRÁFICO TOP 5 BAIRROS ----------------- */
   useEffect(() => {
+    const ac = new AbortController();
     async function carregarTopBairros() {
       try {
-        const r = await fetch(`${API_BASE_URL}/solicitacoes/bairros-top6`);
+        const r = await fetch(`${API_BASE_URL}/solicitacoes/bairros-top6`, { signal: ac.signal });
         const { bairros, meses } = await r.json();
 
         if (!topBairrosRef.current) return;
@@ -462,13 +429,16 @@ const [taxaResolucaoCaixa, setTaxaResolucaoCaixa] = useState<{
           },
         });
       } catch (err) {
-        console.error("Erro gráfico bairros:", err);
+        if ((err as any)?.name !== "AbortError") {
+          console.error("Erro gráfico bairros:", err);
+        }
       }
     }
 
     carregarTopBairros();
     return () => {
       if (topBairrosChartRef.current) topBairrosChartRef.current.destroy();
+      ac.abort();
     };
   }, []);
 

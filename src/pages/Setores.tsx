@@ -161,6 +161,7 @@ const tableRef = useRef<HTMLTableElement | null>(null);
   const [usersBySector, setUsersBySector] =
     useState<Record<number, any[]>>({});
   const [usersLoading, setUsersLoading] = useState(false);
+  const usersControllerRef = useRef<AbortController | null>(null);
 
   const cacheRef = useMemo(
     () => new Map<number, { data: any[]; ts: number }>(),
@@ -422,13 +423,14 @@ const nomeSetorUsuarios = topUsuario
 }, []);
 
   useEffect(() => {
+    const ac = new AbortController();
     async function loadAll() {
       try {
         const [setoresRes, usuariosRes, efRes, qualRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/setores`),
-          fetch(`${API_BASE_URL}/setores-usuarios-resumo`),
-          fetch(`${API_BASE_URL}/setores-eficiencia`),
-          fetch(`${API_BASE_URL}/setores-qualidade`)
+          fetch(`${API_BASE_URL}/setores`, { signal: ac.signal }),
+          fetch(`${API_BASE_URL}/setores-usuarios-resumo`, { signal: ac.signal }),
+          fetch(`${API_BASE_URL}/setores-eficiencia`, { signal: ac.signal }),
+          fetch(`${API_BASE_URL}/setores-qualidade`, { signal: ac.signal })
         ]);
 
         const [setores, usuariosResumo, eficienciaList, qualidadeList] =
@@ -439,7 +441,6 @@ const nomeSetorUsuarios = topUsuario
             qualRes.json()
           ]);
 
-        // Árvore de setores
         setTreeRows(setores || []);
 
         const exp: Record<number, boolean> = {};
@@ -451,7 +452,6 @@ const nomeSetorUsuarios = topUsuario
         });
         setExpandedRoot(exp);
 
-        // Ranking Serviços (roots)
         const roots = (setores || []).filter(
           (s: SetorRow) => (s.nivel ?? 0) === 0
         );
@@ -475,7 +475,6 @@ const nomeSetorUsuarios = topUsuario
           }))
         );
 
-        // Ranking Usuários
         const uMap: Record<number, number> = {};
         (usuariosResumo || []).forEach((u: any) => {
           const val = u.nivel === 0 ? (u.total_geral_root ?? u.usuarios_total) : u.usuarios_total;
@@ -493,7 +492,6 @@ const nomeSetorUsuarios = topUsuario
 
         setRankUsuarios(rankU);
 
-        // Ranking Eficiência
         const efMap: Record<number, EficienciaRow> = {};
         (eficienciaList || []).forEach((e: EficienciaRow) => {
           efMap[e.sector_id] = e;
@@ -517,7 +515,6 @@ const nomeSetorUsuarios = topUsuario
           }))
         );
 
-        // Ranking Qualidade
         const qMap: Record<number, QualidadeRow> = {};
         (qualidadeList || []).forEach((q: QualidadeRow) => {
           qMap[q.sector_id] = q;
@@ -534,11 +531,14 @@ const nomeSetorUsuarios = topUsuario
 
         setRankQualidade(qTop);
       } catch (err) {
-        console.error("Erro ao carregar setores:", err);
+        if ((err as any)?.name !== "AbortError") {
+          console.error("Erro ao carregar setores:", err);
+        }
       }
     }
 
     loadAll();
+    return () => ac.abort();
   }, []);
 
   /* ============================================================
@@ -666,7 +666,10 @@ const nomeSetorUsuarios = topUsuario
 
     try {
       setUsersLoading(true);
-      const r = await fetch(`${API_BASE_URL}/setores/${sectorId}/usuarios`);
+      if (usersControllerRef.current) usersControllerRef.current.abort();
+      const ac = new AbortController();
+      usersControllerRef.current = ac;
+      const r = await fetch(`${API_BASE_URL}/setores/${sectorId}/usuarios`, { signal: ac.signal });
       const data = await r.json();
 
       cacheRef.set(sectorId, { data: data || [], ts: now });
@@ -679,6 +682,12 @@ const nomeSetorUsuarios = topUsuario
       setUsersLoading(false);
     }
   }
+
+  useEffect(() => {
+    return () => {
+      usersControllerRef.current?.abort();
+    };
+  }, []);
 
   function hideSectorUsers(sectorId: number) {
     if (openUsersSectorId === sectorId) setOpenUsersSectorId(null);
