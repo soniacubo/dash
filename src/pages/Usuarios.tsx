@@ -18,13 +18,12 @@ type UserDetail = {
   id: number;
   nome: string;
   secretaria: string | null;
-  departamentos?: string | null;
+  email: string | null;
+  phone: string | null;
   data_cadastro: string | null;
   ultimo_despacho: string | null;
   dias_sem_despacho: number | null;
   despachos_periodo: number;
-  email?: string | null;
-  phone?: string | null;
 };
 
 type UsuariosKpis = {
@@ -68,13 +67,6 @@ type PeriodRange = {
   fimISO: string;
   inicioBR: string;
   fimBR: string;
-};
-
-type EvolucaoMes = {
-  ano: number;
-  mes: number; // 1..12
-  label: string;
-  total: number;
 };
 
 /* ============================================================
@@ -125,7 +117,6 @@ function getPeriodRange(period: PeriodKey): PeriodRange {
       break;
 
     case "1y":
-      // Este ano: de 1º de janeiro até hoje
       inicio.setMonth(0, 1);
       inicio.setHours(0, 0, 0, 0);
       break;
@@ -133,6 +124,7 @@ function getPeriodRange(period: PeriodKey): PeriodRange {
     case "ano_passado":
       inicio.setFullYear(fim.getFullYear() - 1, 0, 1);
       inicio.setHours(0, 0, 0, 0);
+
       fim.setFullYear(fim.getFullYear() - 1, 11, 31);
       fim.setHours(23, 59, 59, 999);
       break;
@@ -141,22 +133,14 @@ function getPeriodRange(period: PeriodKey): PeriodRange {
       inicio.setFullYear(2000, 0, 1);
       inicio.setHours(0, 0, 0, 0);
       break;
-
-    default:
-      inicio.setDate(fim.getDate() - 29);
-      inicio.setHours(0, 0, 0, 0);
-      break;
   }
-
-  const toISO = (d: Date) => d.toISOString().slice(0, 10);
-  const toBR = (d: Date) => d.toLocaleDateString("pt-BR");
 
   return {
     key: period,
-    inicioISO: toISO(inicio),
-    fimISO: toISO(fim),
-    inicioBR: toBR(inicio),
-    fimBR: toBR(fim)
+    inicioISO: inicio.toISOString().slice(0, 10),
+    fimISO: fim.toISOString().slice(0, 10),
+    inicioBR: inicio.toLocaleDateString("pt-BR"),
+    fimBR: fim.toLocaleDateString("pt-BR")
   };
 }
 
@@ -171,20 +155,19 @@ function formatDateTime(value: string | null) {
   if (!value) return "—";
   const d = new Date(value);
   if (isNaN(d.getTime())) return "—";
-  const date = d.toLocaleDateString("pt-BR");
-  const time = d.toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-  return `${date}, ${time}`;
+
+  return (
+    d.toLocaleDateString("pt-BR") +
+    ", " +
+    d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+  );
 }
 
-function isRecent(dateStr: string | null) {
-  if (!dateStr) return false;
-  const d = new Date(dateStr);
+function isRecent(value: string | null) {
+  if (!value) return false;
+  const d = new Date(value);
   if (isNaN(d.getTime())) return false;
-  const diffDias = (Date.now() - d.getTime()) / (1000 * 60 * 60 * 24);
-  return diffDias <= 5;
+  return (Date.now() - d.getTime()) / 86400000 <= 5;
 }
 
 function sortIcon(active: boolean, dir: "asc" | "desc") {
@@ -193,45 +176,30 @@ function sortIcon(active: boolean, dir: "asc" | "desc") {
 }
 
 /* ============================================================
-   COMPONENTE
+   COMPONENTE PRINCIPAL
 ============================================================ */
 
 const Usuarios: React.FC = () => {
-  /* --------------------- Estados principais --------------------- */
+  /* ---------------- ESTADOS ---------------- */
   const [kpis, setKpis] = useState<UsuariosKpis | null>(null);
-
-  // Dados para gráficos (distribuição / ranking) – período A
   const [ranking, setRanking] = useState<RankingItem[]>([]);
   const [usuariosPeriodo, setUsuariosPeriodo] = useState<UserDetail[]>([]);
-
-  // Dados para tabela detalhada – período B (independente)
   const [usuariosTabela, setUsuariosTabela] = useState<UserDetail[]>([]);
   const [loadingUsuariosTabela, setLoadingUsuariosTabela] = useState(false);
-  const [erroUsuariosTabela, setErroUsuariosTabela] = useState<string | null>(
-    null
-  );
+  const [erroUsuariosTabela, setErroUsuariosTabela] = useState<string | null>(null);
 
-  // Período dos gráficos
   const [period, setPeriod] = useState<PeriodKey>("30d");
-  const [range, setRange] = useState<PeriodRange>(() =>
-    getPeriodRange("30d")
-  );
-
-  // Período da tabela (dropdown)
   const [periodTable, setPeriodTable] = useState<PeriodKey>("7d");
-  const [rangeTable, setRangeTable] = useState<PeriodRange>(() =>
-    getPeriodRange("7d")
-  );
 
-  // Ordenação da tabela – começa por despachos no período (desc)
+  const [range, setRange] = useState(() => getPeriodRange("30d"));
+  const [rangeTable, setRangeTable] = useState(() => getPeriodRange("7d"));
+
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: "despachos_periodo",
     direction: "desc"
   });
 
-  const tabelaWrapperRef = useRef<HTMLDivElement | null>(null);
-
-  /* --------------------- Charts refs --------------------- */
+  /* ------------ GRÁFICOS ------------ */
   const evolucaoChartRef = useRef<HTMLCanvasElement | null>(null);
   const evolucaoChartInstance = useRef<Chart | null>(null);
 
@@ -242,79 +210,67 @@ const Usuarios: React.FC = () => {
   const rankingChartInstance = useRef<Chart | null>(null);
 
   /* ============================================================
-     1) Carga inicial: KPIs + evolução 12 meses
+     1) CARREGAMENTO DE KPIS + EVOLUÇÃO
   ============================================================= */
+
   useEffect(() => {
     async function loadKpis() {
       try {
         const r = await fetch(`${API_BASE_URL}/usuarios/kpis`);
-        if (!r.ok) throw new Error("Erro ao buscar KPIs");
         const data: UsuariosKpis = await r.json();
         setKpis(data);
-      } catch (err) {
-        console.error(err);
+      } catch (e) {
+        console.error("Erro KPIs:", e);
       }
     }
 
-    async function loadEvolucao12Meses() {
+    async function loadEvolucao() {
       try {
         const r = await fetch(`${API_BASE_URL}/usuarios/detalhes`);
-        if (!r.ok) throw new Error("Erro ao buscar evolução de usuários");
-
         const data: UserDetail[] = await r.json();
 
-        // monta os últimos 12 meses (sempre 1º dia de cada mês)
         const base = new Date();
         base.setDate(1);
-        base.setHours(0, 0, 0, 0);
 
-        const meses: EvolucaoMes[] = [];
+        const meses = [];
+
         for (let i = 11; i >= 0; i--) {
           const d = new Date(base);
           d.setMonth(base.getMonth() - i);
-          const ano = d.getFullYear();
-          const mes = d.getMonth() + 1;
-          const label = d.toLocaleDateString("pt-BR", {
-            month: "short"
+
+          meses.push({
+            ano: d.getFullYear(),
+            mes: d.getMonth() + 1,
+            label: d.toLocaleDateString("pt-BR", { month: "short" }),
+            total: 0
           });
-
-          meses.push({ ano, mes, label, total: 0 });
         }
-
-        const minAnoMes = meses[0].ano * 12 + (meses[0].mes - 1);
-        const maxAnoMes =
-          meses[meses.length - 1].ano * 12 +
-          (meses[meses.length - 1].mes - 1);
 
         data.forEach(u => {
           if (!u.data_cadastro) return;
           const d = new Date(u.data_cadastro);
-          if (isNaN(d.getTime())) return;
 
-          const ym = d.getFullYear() * 12 + d.getMonth();
-          if (ym < minAnoMes || ym > maxAnoMes) return;
-
-          const idx = meses.findIndex(
+          const mes = meses.find(
             m => m.ano === d.getFullYear() && m.mes === d.getMonth() + 1
           );
-          if (idx >= 0) {
-            meses[idx].total += 1;
-          }
+
+          if (mes) mes.total++;
         });
 
         setEvolucao(meses);
-      } catch (err) {
-        console.error(err);
+      } catch (e) {
+        console.error("Erro evolução:", e);
       }
     }
 
     loadKpis();
-    loadEvolucao12Meses();
+    loadEvolucao();
   }, []);
 
   /* ============================================================
-     2) Atualiza ranges quando os períodos mudam
+     2) PERIOD CHANGES
   ============================================================= */
+
   useEffect(() => {
     setRange(getPeriodRange(period));
   }, [period]);
@@ -324,102 +280,95 @@ const Usuarios: React.FC = () => {
   }, [periodTable]);
 
   /* ============================================================
-     3) Buscar detalhes + ranking para os GRÁFICOS
-        sempre que o range (gráficos) mudar
+     3) CARREGAR RANKING + DETALHES DOS GRÁFICOS
   ============================================================= */
+
   useEffect(() => {
-    async function loadUsuariosPeriodo() {
+    async function loadPeriodo() {
       try {
-        const url = new URL(
-          `${API_BASE_URL}/usuarios/detalhes`,
-          window.location.href
+        const r = await fetch(
+          `${API_BASE_URL}/usuarios/detalhes?inicio=${range.inicioISO}&fim=${range.fimISO}`
         );
-        url.searchParams.set("inicio", range.inicioISO);
-        url.searchParams.set("fim", range.fimISO);
-
-        const r = await fetch(url.toString());
-        if (!r.ok) throw new Error("Erro ao buscar detalhes (gráficos)");
-
-        const data: UserDetail[] = await r.json();
+        const data = await r.json();
         setUsuariosPeriodo(data);
-      } catch (err) {
-        console.error(err);
+      } catch (e) {
+        console.error("Erro período:", e);
       }
     }
 
     async function loadRanking() {
       try {
-        const url = new URL(
-          `${API_BASE_URL}/usuarios/ranking`,
-          window.location.href
+        const r = await fetch(
+          `${API_BASE_URL}/usuarios/ranking?inicio=${range.inicioISO}&fim=${range.fimISO}`
         );
-        url.searchParams.set("inicio", range.inicioISO);
-        url.searchParams.set("fim", range.fimISO);
-
-        const r = await fetch(url.toString());
-        if (!r.ok) throw new Error("Erro ao buscar ranking");
-
-        const data: RankingItem[] = await r.json();
+        const data = await r.json();
         setRanking(data);
-      } catch (err) {
-        console.error(err);
+      } catch (e) {
+        console.error("Erro ranking:", e);
       }
     }
 
-    loadUsuariosPeriodo();
+    loadPeriodo();
     loadRanking();
   }, [range.inicioISO, range.fimISO]);
 
   /* ============================================================
-     4) Buscar detalhes para a TABELA (período independente)
+     4) CARREGAR LISTA DETALHADA DA TABELA
   ============================================================= */
+
   useEffect(() => {
-    async function loadUsuariosTabela() {
+    async function loadTabela() {
       try {
         setLoadingUsuariosTabela(true);
         setErroUsuariosTabela(null);
 
-        const url = new URL(
-          `${API_BASE_URL}/usuarios/detalhes`,
-          window.location.href
+        const r = await fetch(
+          `${API_BASE_URL}/usuarios/detalhes?inicio=${rangeTable.inicioISO}&fim=${rangeTable.fimISO}`
         );
-        url.searchParams.set("inicio", rangeTable.inicioISO);
-        url.searchParams.set("fim", rangeTable.fimISO);
-
-        const r = await fetch(url.toString());
-        if (!r.ok) throw new Error("Erro ao buscar detalhes (tabela)");
 
         const data: UserDetail[] = await r.json();
         setUsuariosTabela(data);
-      } catch (err) {
-        console.error(err);
-        setErroUsuariosTabela(
-          "Erro ao carregar lista detalhada de usuários."
-        );
+
+      } catch (e) {
+        console.error("Erro tabela:", e);
+        setErroUsuariosTabela("Erro ao carregar usuários.");
       } finally {
         setLoadingUsuariosTabela(false);
       }
     }
 
-    loadUsuariosTabela();
+    loadTabela();
   }, [rangeTable.inicioISO, rangeTable.fimISO]);
 
   /* ============================================================
-     5) Gráfico 12 meses – evolução de novos usuários
+     RANKING — Filtrar apenas servidores (não cidadãos)
   ============================================================= */
-  const [evolucao, setEvolucao] = useState<EvolucaoMes[]>([]);
+
+  const rankingServidores = useMemo(() => {
+    return ranking.filter(r =>
+      usuariosPeriodo.some(
+        u => u.nome === r.nome && u.secretaria && u.secretaria.trim() !== ""
+      )
+    );
+  }, [ranking, usuariosPeriodo]);
+
+  /* ============================================================
+     GRÁFICO — Evolução 12 meses
+  ============================================================= */
+
+  const [evolucao, setEvolucao] = useState<any[]>([]);
 
   useEffect(() => {
     if (!evolucao.length) return;
+
     const canvas = evolucaoChartRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    if (evolucaoChartInstance.current) {
+    if (evolucaoChartInstance.current)
       evolucaoChartInstance.current.destroy();
-    }
 
     evolucaoChartInstance.current = new Chart(ctx, {
       type: "line",
@@ -430,59 +379,35 @@ const Usuarios: React.FC = () => {
             label: "Novos servidores",
             data: evolucao.map(m => m.total),
             borderWidth: 2,
-            fill: false,
             tension: 0.25,
-            pointRadius: 3
+            fill: false
           }
         ]
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label(ctx) {
-                return `${ctx.parsed.y} novos servidores`;
-              }
-            }
-          }
-        },
-        scales: {
-          x: {
-            ticks: { font: { size: 11 } }
-          },
-          y: {
-            beginAtZero: true,
-            ticks: { stepSize: 1 }
-          }
-        }
-      }
+      options: { responsive: true, maintainAspectRatio: false }
     });
   }, [evolucao]);
 
   /* ============================================================
-     6) Distribuição de atividade – colunas verticais
-        (faixas de despachos no período – gráficos)
+     GRÁFICO — Distribuição
   ============================================================= */
 
   const atividadeDistribuicao = useMemo(() => {
-    const buckets = [
+    const ranges = [
       { label: "Sem despachos", min: 0, max: 0, total: 0 },
       { label: "1 a 5", min: 1, max: 5, total: 0 },
       { label: "6 a 20", min: 6, max: 20, total: 0 },
       { label: "21 a 50", min: 21, max: 50, total: 0 },
-      { label: "51 ou mais", min: 51, max: Infinity, total: 0 }
+      { label: "51+", min: 51, max: Infinity, total: 0 }
     ];
 
     usuariosPeriodo.forEach(u => {
-      const d = u.despachos_periodo ?? 0;
-      const bucket = buckets.find(b => d >= b.min && d <= b.max);
-      if (bucket) bucket.total += 1;
+      const v = u.despachos_periodo ?? 0;
+      const r = ranges.find(r => v >= r.min && v <= r.max);
+      if (r) r.total++;
     });
 
-    return buckets;
+    return ranges;
   }, [usuariosPeriodo]);
 
   useEffect(() => {
@@ -492,66 +417,27 @@ const Usuarios: React.FC = () => {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    if (atividadeChartInstance.current) {
+    if (atividadeChartInstance.current)
       atividadeChartInstance.current.destroy();
-    }
-
-    const labels = atividadeDistribuicao.map(b => b.label);
-    const data = atividadeDistribuicao.map(b => b.total);
 
     atividadeChartInstance.current = new Chart(ctx, {
       type: "bar",
       data: {
-        labels,
+        labels: atividadeDistribuicao.map(b => b.label),
         datasets: [
           {
             label: "Servidores",
-            data
+            data: atividadeDistribuicao.map(b => b.total)
           }
         ]
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label(ctx) {
-                const qtd = ctx.parsed.y || 0;
-                return `${qtd} servidores`;
-              }
-            }
-          }
-        },
-        scales: {
-          x: {
-            ticks: {
-              font: { size: 11 }
-            }
-          },
-          y: {
-            beginAtZero: true,
-            ticks: {
-              stepSize: 5
-            }
-          }
-        }
-      }
+      options: { responsive: true, maintainAspectRatio: false }
     });
   }, [atividadeDistribuicao]);
 
   /* ============================================================
-     7) Ranking TOP 5 – filtrando cidadãos (somente servidores)
+     GRÁFICO — Ranking
   ============================================================= */
-
-  const rankingServidores = useMemo(() => {
-    if (!ranking.length || !usuariosPeriodo.length) return [];
-    return ranking.filter(r => {
-      const u = usuariosPeriodo.find(u => u.nome === r.nome);
-      return u && u.secretaria && u.secretaria.trim() !== "";
-    });
-  }, [ranking, usuariosPeriodo]);
 
   useEffect(() => {
     const canvas = rankingChartRef.current;
@@ -560,162 +446,85 @@ const Usuarios: React.FC = () => {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    if (rankingChartInstance.current) {
+    if (rankingChartInstance.current)
       rankingChartInstance.current.destroy();
-    }
 
     const top5 = rankingServidores.slice(0, 5);
-    if (top5.length === 0) {
-      rankingChartInstance.current = null;
-      return;
-    }
-
-    const labels = top5.map((_, idx) => `${idx + 1}º`);
-    const data = top5.map(r => r.total);
-
-    const secretarias = top5.map(r => {
-      const u = usuariosPeriodo.find(u => u.nome === r.nome);
-      return u?.secretaria || "—";
-    });
-
-    const medalColors = top5.map((_, idx) => {
-      if (idx === 0) return "#fbbf24"; // ouro
-      if (idx === 1) return "#9ca3af"; // prata
-      if (idx === 2) return "#f97316"; // bronze
-      return "#3b82f6"; // padrão
-    });
+    if (!top5.length) return;
 
     rankingChartInstance.current = new Chart(ctx, {
       type: "bar",
       data: {
-        labels,
+        labels: top5.map((_, i) => `${i + 1}º`),
         datasets: [
           {
             label: "Despachos",
-            data,
-            backgroundColor: medalColors
+            data: top5.map(r => r.total)
           }
         ]
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              title(items) {
-                const idx = items[0].dataIndex;
-                return top5[idx].nome;
-              },
-              label(ctx) {
-                return `${ctx.parsed.y} despachos`;
-              },
-              afterBody(items) {
-                const idx = items[0].dataIndex;
-                return `Secretaria: ${secretarias[idx]}`;
-              }
-            }
-          }
-        },
-        scales: {
-          x: {
-            ticks: { font: { size: 11 } }
-          },
-          y: {
-            beginAtZero: true,
-            ticks: { stepSize: 5 }
-          }
-        }
-      }
+      options: { responsive: true, maintainAspectRatio: false }
     });
-  }, [rankingServidores, usuariosPeriodo]);
+  }, [rankingServidores]);
 
   /* ============================================================
-     8) Ordenação da tabela
+     ORDENAR TABELA
   ============================================================= */
+
   const sortedUsuarios = useMemo(() => {
     const list = [...usuariosTabela];
+    const { key, direction } = sortConfig;
+    const factor = direction === "asc" ? 1 : -1;
+
+    const val = (u: UserDetail) => {
+      switch (key) {
+        case "nome": return u.nome.toLowerCase();
+        case "secretaria": return (u.secretaria || "").toLowerCase();
+        case "data_cadastro": return u.data_cadastro || "";
+        case "ultimo_despacho": return u.ultimo_despacho || "";
+        case "dias_sem_despacho": return u.dias_sem_despacho ?? Infinity;
+        case "despachos_periodo": return u.despachos_periodo;
+      }
+    };
 
     return list.sort((a, b) => {
-      const { key, direction } = sortConfig;
-
-      const dirFactor = direction === "asc" ? 1 : -1;
-
-      const getValue = (user: UserDetail) => {
-        switch (key) {
-          case "nome":
-            return (user.nome || "").toLowerCase();
-          case "secretaria":
-            return (user.secretaria || "").toLowerCase();
-          case "data_cadastro":
-            return user.data_cadastro || "";
-          case "ultimo_despacho":
-            return user.ultimo_despacho || "";
-          case "dias_sem_despacho":
-            return user.dias_sem_despacho ?? Number.POSITIVE_INFINITY;
-          case "despachos_periodo":
-            return user.despachos_periodo;
-          default:
-            return "";
-        }
-      };
-
-      const va = getValue(a);
-      const vb = getValue(b);
+      const va = val(a);
+      const vb = val(b);
 
       if (va === vb) return 0;
 
       if (typeof va === "number" && typeof vb === "number") {
-        return va > vb ? dirFactor : -dirFactor;
+        return va > vb ? factor : -factor;
       }
 
-      return String(va) > String(vb) ? dirFactor : -dirFactor;
+      return String(va) > String(vb) ? factor : -factor;
     });
   }, [usuariosTabela, sortConfig]);
 
-  function handleSort(column: SortKey) {
-    setSortConfig(prev => {
-      if (prev.key === column) {
-        return {
-          key: column,
-          direction: prev.direction === "asc" ? "desc" : "asc"
-        };
-      }
-      return { key: column, direction: "asc" };
-    });
+  function handleSort(col: SortKey) {
+    setSortConfig(prev =>
+      prev.key === col
+        ? { key: col, direction: prev.direction === "asc" ? "desc" : "asc" }
+        : { key: col, direction: "asc" }
+    );
   }
 
   /* ============================================================
-     9) Clique fora da tabela → reset ordenação (despachos desc)
-  ============================================================= */
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      const wrapper = tabelaWrapperRef.current;
-      if (!wrapper) return;
-
-      if (!wrapper.contains(e.target as Node)) {
-        setSortConfig({ key: "despachos_periodo", direction: "desc" });
-      }
-    }
-
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, []);
-
-  /* ============================================================
-     RENDER
+     RENDER FINAL
   ============================================================= */
 
   return (
     <main className="main-container">
       <Header />
 
-      {/* ==================== HEADER / TÍTULO PRINCIPAL ==================== */}
+      {/* ============================================================ */}
+      {/* TÍTULO PRINCIPAL */}
+      {/* ============================================================ */}
+
       <section className="dash-section">
         <div className="section-title-wrapper">
           <TitleWithTooltip
-            tooltip="Visão consolidada de servidores ativos, engajamento e atividade de despacho."
+            tooltip="Visão consolidada de servidores ativos e atividade."
             className="section-title-main"
           >
             Usuários do sistema
@@ -725,7 +534,9 @@ const Usuarios: React.FC = () => {
           </p>
         </div>
 
-        {/* ==================== KPIs SUPERIORES – CARDS CENTRALIZADOS ==================== */}
+        {/* ============================================================ */}
+        {/* KPIs */}
+        {/* ============================================================ */}
         <div className="card-deck">
           <div className="user-stat-card">
             <span>Total de servidores ativos</span>
@@ -749,102 +560,90 @@ const Usuarios: React.FC = () => {
         </div>
       </section>
 
-      {/* ==================== EVOLUÇÃO + GRÁFICOS ==================== */}
+      {/* ============================================================ */}
+      {/* EVOLUÇÃO */}
+      {/* ============================================================ */}
+
       <section className="dash-section">
-        {/* Gráfico 12 meses */}
         <div className="vg-chart-card">
-          <div style={{ textAlign: "center" }}>
-            <p className="vg-chart-title">
-              Evolução de novos servidores ativos (últimos 12 meses)
-            </p>
-            <p className="vg-chart-sub">
-              Quantidade de usuários criados em cada mês, considerando apenas
-              servidores ativos.
-            </p>
-          </div>
-          <div
-            className="mini-chart-wrapper"
-            style={{ height: 260, marginTop: 8 }}
-          >
+          <p className="vg-chart-title">
+            Evolução de novos servidores ativos (últimos 12 meses)
+          </p>
+          <p className="vg-chart-sub">Quantidade de usuários criados mensalmente.</p>
+
+          <div className="mini-chart-wrapper" style={{ height: 260 }}>
             <canvas ref={evolucaoChartRef} />
           </div>
         </div>
 
-        {/* Filtro de período (igual visão geral) */}
+        {/* ============================================================ */}
+        {/* TÍTULO DOS INDICADORES POR PERÍODO */}
+        {/* ============================================================ */}
+
         <div className="section-title-wrapper" style={{ marginTop: 28 }}>
           <TitleWithTooltip
-            tooltip="Atividade de despacho e ranking de servidores dentro do intervalo selecionado."
+            tooltip="Indicadores calculados dentro do período selecionado."
             className="section-title-main"
           >
             Indicadores por Período
           </TitleWithTooltip>
+
           <p className="section-title-sub">
-            Atividade de despacho e ranking de servidores dentro do intervalo
-            selecionado.
+            Atividade de despacho e ranking de servidores dentro do período selecionado.
           </p>
         </div>
+
+        {/* ============================================================ */}
+        {/* BOTÕES DO PERÍODO */}
+        {/* ============================================================ */}
 
         <div className="period-filter">
           {PERIOD_OPTIONS.map(opt => (
             <button
               key={opt.key}
-              type="button"
               onClick={() => setPeriod(opt.key)}
-              className={
-                period === opt.key ? "period-btn active" : "period-btn"
-              }
+              className={period === opt.key ? "period-btn active" : "period-btn"}
             >
               {opt.label}
             </button>
           ))}
         </div>
 
-        {/* Gráficos lado a lado */}
+        {/* ============================================================ */}
+        {/* GRÁFICOS EM LINHA */}
+        {/* ============================================================ */}
+
         <div className="section-content-flex" style={{ marginTop: 20 }}>
-          {/* Distribuição de atividade */}
+          {/* Distribuição */}
           <div className="ranking-box">
             <div className="vg-chart-card">
               <p className="vg-chart-title">Distribuição de atividade</p>
               <p className="vg-chart-sub">
-                Quantidade de servidores ativos por faixa de despachos
-                realizados entre{" "}
+                Quantidade de servidores por faixa de despachos entre{" "}
                 <strong>{range.inicioBR}</strong> e{" "}
                 <strong>{range.fimBR}</strong>.
               </p>
-              <div
-                className="mini-chart-wrapper"
-                style={{ height: 260, marginTop: 8 }}
-              >
+
+              <div className="mini-chart-wrapper" style={{ height: 260 }}>
                 <canvas ref={atividadeChartRef} />
               </div>
             </div>
           </div>
 
-          {/* Ranking TOP 5 */}
+          {/* Ranking */}
           <div className="ranking-box">
             <div className="vg-chart-card">
-              <p className="vg-chart-title">Ranking de despachos no período</p>
+              <p className="vg-chart-title">Ranking de despachos</p>
               <p className="vg-chart-sub">
-                Servidores que mais realizaram despachos entre{" "}
-                <strong>{range.inicioBR}</strong> e{" "}
-                <strong>{range.fimBR}</strong>. Passe o mouse nas colunas para
-                ver a secretaria de cada servidor.
+                Servidores que mais realizaram despachos no período informado.
               </p>
-              {rankingServidores.slice(0, 5).length === 0 ? (
-                <p
-                  style={{
-                    fontSize: "0.85rem",
-                    color: "#6b7280",
-                    marginTop: 12
-                  }}
-                >
-                  Nenhum despacho encontrado no período selecionado.
+
+              {rankingServidores.length === 0 ? (
+                <p style={{ color: "#6b7280", marginTop: 12 }}>
+                  Nenhum servidor encontrado no período selecionado.
                 </p>
               ) : (
-                <div
-                  className="mini-chart-wrapper"
-                  style={{ height: 260, marginTop: 8 }}
-                >
+                <div className="mini-chart-wrapper" style={{ height: 260 }}>
                   <canvas ref={rankingChartRef} />
                 </div>
               )}
@@ -853,223 +652,108 @@ const Usuarios: React.FC = () => {
         </div>
       </section>
 
-      {/* ==================== LISTA DETALHADA ==================== */}
+      {/* ============================================================ */}
+      {/* TABELA COMPLETA */}
+      {/* ============================================================ */}
+
       <section className="dash-section">
-        {/* Header da seção com título + dropdown de período da TABELA */}
         <div className="section-title-wrapper">
           <TitleWithTooltip
-            tooltip="Relatório detalhado de servidores, secretaria de atuação e comportamento de despacho no período selecionado (apenas para esta tabela)."
+            tooltip="Relatório detalhado de servidores e comportamento recente."
             className="section-title-main"
           >
             Lista detalhada de usuários
           </TitleWithTooltip>
+
           <p className="section-title-sub">
-            Veja o comportamento de despacho dos servidores no período escolhido
-            abaixo.
+            Lista de servidores ativos e seus indicadores no período selecionado.
           </p>
         </div>
 
+        {/* Filtro do período da tabela */}
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 12,
-            gap: 16,
-            flexWrap: "wrap"
+            marginBottom: 16,
+            flexWrap: "wrap",
+            gap: 12
           }}
         >
-          <span
-            style={{
-              fontSize: "0.85rem",
-              color: "#6b7280"
-            }}
-          >
-            Período selecionado:{" "}
-            <strong>
-              {rangeTable.inicioBR} a {rangeTable.fimBR}
-            </strong>
-          </span>
+          <strong style={{ color: "#555", fontSize: "0.9rem" }}>
+            Período selecionado: {rangeTable.inicioBR} → {rangeTable.fimBR}
+          </strong>
 
-          <div>
-            <label
-              htmlFor="usuarios-periodo-tabela"
-              style={{
-                fontSize: "0.8rem",
-                color: "#6b7280",
-                marginRight: 8
-              }}
-            >
-              Período da tabela:
-            </label>
-            <select
-              id="usuarios-periodo-tabela"
-              className="eco-select"
-              value={periodTable}
-              onChange={e =>
-                setPeriodTable(e.target.value as PeriodKey)
-              }
-            >
-              {PERIOD_OPTIONS.map(opt => (
-                <option key={opt.key} value={opt.key}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <select
+            className="eco-select"
+            value={periodTable}
+            onChange={e => setPeriodTable(e.target.value as PeriodKey)}
+          >
+            {PERIOD_OPTIONS.map(p => (
+              <option key={p.key} value={p.key}>
+                {p.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Tabela */}
-        <div className="table-wrapper" ref={tabelaWrapperRef}>
+        <div className="table-wrapper">
           {erroUsuariosTabela && (
-            <p style={{ color: "#b91c1c", fontSize: "0.9rem" }}>
-              {erroUsuariosTabela}
-            </p>
+            <p style={{ color: "#b91c1c" }}>{erroUsuariosTabela}</p>
           )}
 
           {loadingUsuariosTabela ? (
-            <p style={{ fontSize: "0.9rem", color: "#6b7280" }}>
-              Carregando usuários...
-            </p>
+            <p style={{ color: "#777" }}>Carregando usuários...</p>
           ) : (
             <table className="cc-table cc-table-usuarios">
               <thead>
                 <tr>
-                  <th
-                    className={
-                      "cc-col-nome sortable" +
-                      (sortConfig.key === "nome"
-                        ? " sortable--active"
-                        : "")
-                    }
-                    onClick={() => handleSort("nome")}
-                  >
-                    <div className="sortable-inner">
-                      Nome
-                      <span className="sort-icon">
-                        {sortIcon(
-                          sortConfig.key === "nome",
-                          sortConfig.direction
-                        )}
-                      </span>
-                    </div>
+                  <th onClick={() => handleSort("nome")}>
+                    Nome {sortIcon(sortConfig.key === "nome", sortConfig.direction)}
                   </th>
 
-                  <th
-                    className={
-                      "cc-col-secretaria sortable" +
-                      (sortConfig.key === "secretaria"
-                        ? " sortable--active"
-                        : "")
-                    }
-                    onClick={() => handleSort("secretaria")}
-                    style={{ textAlign: "left" }}
-                  >
-                    <div className="sortable-inner">
-                      Secretaria
-                      <span className="sort-icon">
-                        {sortIcon(
-                          sortConfig.key === "secretaria",
-                          sortConfig.direction
-                        )}
-                      </span>
-                    </div>
+                  <th onClick={() => handleSort("secretaria")}>
+                    Secretaria{" "}
+                    {sortIcon(sortConfig.key === "secretaria", sortConfig.direction)}
                   </th>
 
-                  <th
-                    className={
-                      "cc-col-data sortable" +
-                      (sortConfig.key === "data_cadastro"
-                        ? " sortable--active"
-                        : "")
-                    }
-                    onClick={() => handleSort("data_cadastro")}
-                    style={{ textAlign: "center" }}
-                  >
-                    <div className="sortable-inner">
-                      Data de cadastro
-                      <span className="sort-icon">
-                        {sortIcon(
-                          sortConfig.key === "data_cadastro",
-                          sortConfig.direction
-                        )}
-                      </span>
-                    </div>
+                  <th onClick={() => handleSort("data_cadastro")} style={{ textAlign: "center" }}>
+                    Cadastro{" "}
+                    {sortIcon(sortConfig.key === "data_cadastro", sortConfig.direction)}
                   </th>
 
-                  <th
-                    className={
-                      "cc-col-numero sortable" +
-                      (sortConfig.key === "dias_sem_despacho"
-                        ? " sortable--active"
-                        : "")
-                    }
-                    onClick={() => handleSort("dias_sem_despacho")}
-                    style={{ textAlign: "center" }}
-                  >
-                    <div className="sortable-inner">
-                      Dias sem despachar
-                      <span className="sort-icon">
-                        {sortIcon(
-                          sortConfig.key === "dias_sem_despacho",
-                          sortConfig.direction
-                        )}
-                      </span>
-                    </div>
+                  <th onClick={() => handleSort("dias_sem_despacho")} style={{ textAlign: "center" }}>
+                    Sem despachar{" "}
+                    {sortIcon(sortConfig.key === "dias_sem_despacho", sortConfig.direction)}
                   </th>
 
-                  <th
-                    className={
-                      "cc-col-data sortable" +
-                      (sortConfig.key === "ultimo_despacho"
-                        ? " sortable--active"
-                        : "")
-                    }
-                    onClick={() => handleSort("ultimo_despacho")}
-                    style={{ textAlign: "center" }}
-                  >
-                    <div className="sortable-inner">
-                      Último despacho
-                      <span className="sort-icon">
-                        {sortIcon(
-                          sortConfig.key === "ultimo_despacho",
-                          sortConfig.direction
-                        )}
-                      </span>
-                    </div>
+                  <th onClick={() => handleSort("ultimo_despacho")} style={{ textAlign: "center" }}>
+                    Último despacho{" "}
+                    {sortIcon(sortConfig.key === "ultimo_despacho", sortConfig.direction)}
                   </th>
 
-                  <th
-                    className={
-                      "cc-col-numero sortable" +
-                      (sortConfig.key === "despachos_periodo"
-                        ? " sortable--active"
-                        : "")
-                    }
-                    onClick={() => handleSort("despachos_periodo")}
-                    style={{ textAlign: "center" }}
-                  >
-                    <div className="sortable-inner">
-                      Despachos no período
-                      <span className="sort-icon">
-                        {sortIcon(
-                          sortConfig.key === "despachos_periodo",
-                          sortConfig.direction
-                        )}
-                      </span>
-                    </div>
+                  <th onClick={() => handleSort("despachos_periodo")} style={{ textAlign: "center" }}>
+                    No período{" "}
+                    {sortIcon(sortConfig.key === "despachos_periodo", sortConfig.direction)}
                   </th>
                 </tr>
               </thead>
 
               <tbody>
+                {sortedUsuarios.length === 0 && (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: "center", padding: 18 }}>
+                      Nenhum usuário encontrado nesse período.
+                    </td>
+                  </tr>
+                )}
+
                 {sortedUsuarios.map(u => (
                   <tr key={u.id}>
-                    <td style={{ textAlign: "left" }}>{u.nome}</td>
+                    <td>{u.nome}</td>
 
-                    <td style={{ textAlign: "left" }}>
-                      {u.secretaria || "—"}
-                    </td>
+                    <td>{u.secretaria || "—"}</td>
 
                     <td style={{ textAlign: "center" }}>
                       {formatDate(u.data_cadastro)}
@@ -1083,26 +767,16 @@ const Usuarios: React.FC = () => {
 
                     <td
                       style={{ textAlign: "center" }}
-                      className={
-                        isRecent(u.ultimo_despacho) ? "valor-verde" : ""
-                      }
+                      className={isRecent(u.ultimo_despacho) ? "valor-verde" : ""}
                     >
                       {formatDateTime(u.ultimo_despacho)}
                     </td>
 
                     <td style={{ textAlign: "center" }}>
-                      {u.despachos_periodo ?? 0}
+                      {u.despachos_periodo}
                     </td>
                   </tr>
                 ))}
-
-                {sortedUsuarios.length === 0 && !loadingUsuariosTabela && (
-                  <tr>
-                    <td colSpan={6} style={{ textAlign: "center", padding: 16 }}>
-                      Nenhum usuário encontrado para o período selecionado.
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           )}

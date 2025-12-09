@@ -11,6 +11,6 @@
     "lib": ["DOM", "ES2020"],
     "baseUrl": "."
   },
-  "include": ["src", "app.js"]
+  "include": ["src", "app.js", "backend/routes"]
 }
 

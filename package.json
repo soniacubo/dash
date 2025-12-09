@@ -8,7 +8,7 @@
     "web": "vite",
     "build:web": "vite build",
     "preview:web": "vite preview",
-    "dev:all": "concurrently -n back,front -c \"yellow.bold\",\"cyan.bold\" \"node server.js\" \"vite\"",
+    "dev:all": "concurrently -n back,front -c \"yellow.bold\",\"cyan.bold\" \"node backend/server.js\" \"vite\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -21,15 +21,14 @@
     "chart.js": "^4.5.1",
     "chartjs-plugin-datalabels": "^2.2.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^5.1.0",
-    "express-rate-limit": "^7.4.0",
-    "helmet": "^7.1.0",
+    "dotenv": "^16.6.1",
+    "express": "^5.2.1",
+    "express-rate-limit": "^7.5.1",
+    "helmet": "^7.2.0",
     "mysql2": "^3.15.3",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-router-dom": "7.9.6",
-    "react-select": "^5.10.2",
     "typescript": "5.9.3"
   },
   "devDependencies": {

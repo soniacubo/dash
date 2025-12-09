@@ -99,9 +99,9 @@ type QualidadeRow = {
 type UsuariosResumoRow = {
   sector_id: number;
   setor: string;
-  usuarios_total?: number;
-  total_geral_root?: number;
+  total_usuarios?: number;  // 👈 novo campo
 };
+
 
 /* ============================================================
    COMPONENTE PRINCIPAL
@@ -190,14 +190,12 @@ const tableRef = useRef<HTMLTableElement | null>(null);
 
 const topUsuario = rankUsuarios[0];
 
-const valorUsuarios = topUsuario
-  ? Number(topUsuario.total_geral_root ?? topUsuario.usuarios_total ?? 0)
-  : "—";
+const valorUsuarios =
+  topUsuario && topUsuario.total_usuarios != null
+    ? Number(topUsuario.total_usuarios)
+    : "—";
 
-// usa o mesmo helper dos outros cards (pega setor, sector_title ou nome)
-const nomeSetorUsuarios = topUsuario
-  ? getNomeSetorById(topUsuario.sector_id, treeRows)
-  : "—";
+const nomeSetorUsuarios = topUsuario?.setor ?? "—";
 
 
 
@@ -475,22 +473,23 @@ const nomeSetorUsuarios = topUsuario
           }))
         );
 
-        const uMap: Record<number, number> = {};
-        (usuariosResumo || []).forEach((u: any) => {
-          const val = u.nivel === 0 ? (u.total_geral_root ?? u.usuarios_total) : u.usuarios_total;
-          uMap[u.sector_id] = Number(val ?? 0);
-        });
-        setUsuariosMap(uMap);
+      const uMap: Record<number, number> = {};
 
-        const rankU = [...(usuariosResumo || [])]
-          .sort(
-            (a, b) =>
-              Number(b.total_geral_root ?? b.usuarios_total ?? 0) -
-              Number(a.total_geral_root ?? a.usuarios_total ?? 0)
-          )
-          .slice(0, 5);
+(usuariosResumo || []).forEach((u: any) => {
+  uMap[u.sector_id] = Number(u.total_usuarios ?? 0);  // 👈 CHAVE CORRETA
+});
 
-        setRankUsuarios(rankU);
+setUsuariosMap(uMap);
+
+     const rankU = [...(usuariosResumo || [])]
+  .sort(
+    (a, b) =>
+      Number(b.total_usuarios ?? 0) - Number(a.total_usuarios ?? 0)
+  )
+  .slice(0, 5);
+
+setRankUsuarios(rankU);
+
 
         const efMap: Record<number, EficienciaRow> = {};
         (eficienciaList || []).forEach((e: EficienciaRow) => {
