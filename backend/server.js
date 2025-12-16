@@ -50,19 +50,25 @@ const allowedOrigins = [
     .map((s) => s.trim())
     .filter(Boolean),
 ];
-
 app.use(
   cors({
     origin(origin, callback) {
       const isDev = process.env.NODE_ENV !== "production";
       if (isDev) return callback(null, true);
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
+
+      const isAllowed =
+        allowedOrigins.includes(origin) ||
+        /^https:\/\/.*\.vercel\.app$/.test(origin);
+
+      if (isAllowed) return callback(null, true);
+
       callback(new Error("CORS bloqueado: " + origin));
     },
     credentials: true,
   })
 );
+
 
 /* ================================
    HEALTHCHECK
