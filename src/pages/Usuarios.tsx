@@ -439,33 +439,87 @@ const Usuarios: React.FC = () => {
      GRÁFICO — Ranking
   ============================================================= */
 
-  useEffect(() => {
-    const canvas = rankingChartRef.current;
-    if (!canvas) return;
+/* ============================================================
+   GRÁFICO — Ranking (versão melhorada com nomes)
+============================================================ */
+useEffect(() => {
+  const canvas = rankingChartRef.current;
+  if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
 
-    if (rankingChartInstance.current)
-      rankingChartInstance.current.destroy();
+  if (rankingChartInstance.current)
+    rankingChartInstance.current.destroy();
 
-    const top5 = rankingServidores.slice(0, 5);
-    if (!top5.length) return;
+  const top5 = rankingServidores.slice(0, 5);
+  if (!top5.length) return;
 
-    rankingChartInstance.current = new Chart(ctx, {
-      type: "bar",
-      data: {
-        labels: top5.map((_, i) => `${i + 1}º`),
-        datasets: [
-          {
-            label: "Despachos",
-            data: top5.map(r => r.total)
+  rankingChartInstance.current = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: top5.map(r => r.nome), // << agora mostra o nome!
+      datasets: [
+        {
+          label: "Despachos",
+          data: top5.map(r => r.total),
+          backgroundColor: "rgba(59, 130, 246, 0.55)", // azul suave
+          borderColor: "rgba(59, 130, 246, 1)",
+          borderWidth: 2,
+          borderRadius: 6, // cantos arredondados
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+
+      plugins: {
+        legend: { display: false },
+
+        datalabels: {
+          anchor: "end",
+          align: "top",
+          formatter: value => value,
+          font: {
+            weight: "bold",
+            size: 12
+          },
+          color: "#1e3a8a"
+        },
+
+        tooltip: {
+          callbacks: {
+            title: () => "",
+            label: ctx => `${ctx.label}: ${ctx.formattedValue} despachos`
           }
-        ]
+        }
       },
-      options: { responsive: true, maintainAspectRatio: false }
-    });
-  }, [rankingServidores]);
+
+      scales: {
+        x: {
+          ticks: {
+            maxRotation: 0,
+            minRotation: 0,
+            font: { size: 11, weight: "bold" },
+            callback: function (value) {
+              const name: string = this.getLabelForValue(value);
+              return name.length > 14
+                ? name.slice(0, 14) + "…" // reduz label longo com "..."
+                : name;
+            }
+          }
+        },
+
+        y: {
+          beginAtZero: true,
+          grid: { color: "rgba(0,0,0,0.06)" }
+        }
+      }
+    }
+  });
+}, [rankingServidores]);
+
 
   /* ============================================================
      ORDENAR TABELA
@@ -567,7 +621,7 @@ const Usuarios: React.FC = () => {
       <section className="dash-section">
         <div className="vg-chart-card">
           <p className="vg-chart-title">
-            Evolução de novos servidores ativos (últimos 12 meses)
+            Evolução de novos servidores cadastrados no sistema (últimos 12 meses)
           </p>
           <p className="vg-chart-sub">Quantidade de usuários criados mensalmente.</p>
 
