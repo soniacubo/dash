@@ -3,8 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Visaogeral from "./pages/Visaogeral";
 import Setores from "./pages/Setores";
 import Usuarios from "./pages/Usuarios";
-import Solicitacoes from "./pages/solicitacoes";
-import Avaliacoes from "./pages/avaliacoes";
+import Solicitacoes from "./pages/Solicitacoes";
+import Avaliacoes from "./pages/Avaliacoes";
 
 /* ============================================================
    RESOLVE API BASE — LOCAL, VERCEL, RENDER
