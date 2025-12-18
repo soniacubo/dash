@@ -7,7 +7,11 @@ type SectionTitleProps = {
   infoTooltip?: string;
 };
 
-const SectionTitle = ({ title, subtitle, infoTooltip }: SectionTitleProps) => {
+export default function SectionTitle({
+  title,
+  subtitle,
+  infoTooltip,
+}: SectionTitleProps) {
   return (
     <header
       style={{
@@ -60,4 +64,4 @@ const SectionTitle = ({ title, subtitle, infoTooltip }: SectionTitleProps) => {
       )}
     </header>
   );
-};
+}

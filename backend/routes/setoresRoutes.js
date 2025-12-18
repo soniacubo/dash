@@ -210,6 +210,67 @@ router.get("/setores-eficiencia", async (req, res) => {
   }
 });
 
+
+// Ranking de serviços ÚNICOS por secretaria (nível 0)
+router.get("/setores-ranking-servicos", async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `
+      WITH RECURSIVE setores_hierarquia AS (
+        SELECT
+          id AS sector_id,
+          parent_id,
+          title,
+          0 AS nivel,
+          CAST(id AS CHAR(500)) AS path,
+          id AS root_id,
+          title AS root_title
+        FROM jp_conectada.sectors
+        WHERE active = 1
+          AND tenant_id = ?
+          AND parent_id IS NULL
+
+        UNION ALL
+
+        SELECT
+          s.id AS sector_id,
+          s.parent_id,
+          s.title,
+          sh.nivel + 1 AS nivel,
+          CONCAT(sh.path, ',', s.id) AS path,
+          sh.root_id,
+          sh.root_title
+        FROM jp_conectada.sectors s
+        JOIN setores_hierarquia sh ON sh.sector_id = s.parent_id
+        WHERE s.active = 1
+          AND s.tenant_id = ?
+      )
+      SELECT
+        sh.root_id AS sector_id,
+        sh.root_title AS setor,
+        COUNT(DISTINCT ss.service_id) AS total_servicos
+      FROM setores_hierarquia sh
+      JOIN jp_conectada.service_sector ss
+        ON ss.sector_id = sh.sector_id
+      JOIN jp_conectada.services se
+        ON se.id = ss.service_id
+       AND se.active = 1
+       AND se.tenant_id = ?
+      GROUP BY sh.root_id, sh.root_title
+      ORDER BY total_servicos DESC, setor ASC;
+      `,
+      [TENANT_ID, TENANT_ID, TENANT_ID]
+    );
+
+    res.json(rows);
+  } catch (error) {
+    console.error("Erro /setores-ranking-servicos:", error);
+    res.status(500).json({ error: "Erro ao buscar ranking de serviços" });
+  }
+});
+
+
+
 router.get("/setores-qualidade", async (req, res) => {
   try {
     const [rows] = await db.query(`

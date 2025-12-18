@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Header from "../components/Header";
-import TitleWithTooltip from "../components/TitleWithTooltip";
+import SectionTitle from "../components/SectionTitle";
 import { API_BASE_URL } from "../app";
 import Chart from "chart.js/auto";
 
@@ -298,6 +298,7 @@ useEffect(() => {
     (distribuicao?.c4 || 0) + (distribuicao?.c5 || 0);
   const negativas =
     (distribuicao?.c1 || 0) + (distribuicao?.c2 || 0);
+const neutras = distribuicao?.c3 || 0;
 
   const pct = (v: number) =>
     total ? `${((v / total) * 100).toFixed(1)}%` : "0%";
@@ -313,8 +314,13 @@ const rankingServicosOrdenado = [...rankingServicos].sort(
 
 
 
-  const comentariosPos = comentarios.filter((c) => c.score >= 4).slice(0, 2);
-  const comentariosNeg = comentarios.filter((c) => c.score <= 2).slice(0, 2);
+const comentariosPos = comentarios
+  .filter((c) => c.score >= 4)
+  .slice(0, 4);
+
+const comentariosNeg = comentarios
+  .filter((c) => c.score <= 2)
+  .slice(0, 4);
 
 
 
@@ -511,9 +517,10 @@ function RankingExpandivel({
 
   return (
     <>
+      <main className="main-container">
       <Header />
 
-      <main className="main-container">
+   
         {/* CABEÇALHO */}
         <section className="dash-section section-title-wrapper">
           <h1 className="section-title-main">Avaliações</h1>
@@ -551,33 +558,100 @@ function RankingExpandivel({
           </div>
         </section>
 
-        {/* KPIs */}
-        <section className="dash-section">
-          <div className="kpi-grid">
-            <div className="kpi-card"><span>Total avaliações</span><strong>{fmt.format(total)}</strong></div>
-            <div className="kpi-card"><span>Média geral</span><strong>{fmt.format(resumo?.media_geral || 0)}</strong></div>
-            <div className="kpi-card"><span>% negativas</span><strong>{pct(negativas)}</strong></div>
-            <div className="kpi-card"><span>% positivas</span><strong>{pct(positivas)}</strong></div>
-          </div>
-        </section>
+{/* KPIs */}
+<section className="dash-section">
+  <div className="kpi-grid">
+    {/* TOTAL */}
+    <div className="kpi-card kpi-blue">
+      <span className="kpi-label">Total de avaliações</span>
+      <div className="kpi-value">{fmt.format(total)}</div>
+      <span className="kpi-sub">Avaliações registradas</span>
+      <span className="kpi-icon">📝</span>
+    </div>
 
-        {/* GRÁFICOS */}
-        <section className="dash-section section-content-flex">
-          <div className="ranking-box"><h3>Distribuição das notas</h3><canvas id="dist" /></div>
-          <div className="ranking-box"><h3>Evolução da média</h3><canvas id="evo" /></div>
-        </section>
+    {/* MÉDIA */}
+    <div className="kpi-card kpi-purple">
+      <span className="kpi-label">Média geral</span>
+      <div className="kpi-value">
+        {fmt.format(resumo?.media_geral || 0)}
+      </div>
+      <span className="kpi-sub">Escala de 1 a 5</span>
+      <span className="kpi-icon">⭐</span>
+    </div>
+
+    {/* POSITIVAS */}
+    <div className="kpi-card kpi-green">
+      <span className="kpi-label">Avaliações positivas</span>
+      <div className="kpi-value">{pct(positivas)}</div>
+      <span className="kpi-sub">Notas 4 e 5</span>
+      <span className="kpi-icon">😊</span>
+    </div>
+
+    {/* NEUTRAS */}
+    <div className="kpi-card kpi-orange">
+      <span className="kpi-label">Avaliações neutras</span>
+      <div className="kpi-value">{pct(neutras)}</div>
+      <span className="kpi-sub">Nota 3</span>
+      <span className="kpi-icon">😐</span>
+    </div>
+
+    {/* NEGATIVAS */}
+    <div className="kpi-card kpi-red">
+      <span className="kpi-label">Avaliações negativas</span>
+      <div className="kpi-value">{pct(negativas)}</div>
+      <span className="kpi-sub">Notas 1 e 2</span>
+      <span className="kpi-icon">😡</span>
+    </div>
+  </div>
+</section>
+
 
    <section className="dash-section">
+          <SectionTitle
+            title="Ranking de Satisfação dos Cidadãos"
+            subtitle="Avaliação de satisfação pelos serviços prestados"
+          />
   <div className="ranking-grid-2">
     <RankingExpandivel
-      title="Ranking de setores"
+      title="Secretarias"
       items={rankingSetoresOrdenado}
     />
 
     <RankingExpandivel
-      title="Ranking de serviços"
+      title="Serviços"
       items={rankingServicosOrdenado}
     />
+  </div>
+</section>
+
+{/* GRÁFICOS */}
+<section className="dash-section">
+  <div className="ranking-box full-width">
+    {/* TÍTULO DO BLOCO */}
+    <SectionTitle
+      title="Distribuição das Notas e Evolução das Médias"
+      subtitle="Análise do volume de avaliações e da evolução temporal"
+    />
+
+    {/* GRÁFICOS */}
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 24,
+        marginTop: 16,
+      }}
+    >
+      <div>
+        <h3>Distribuição das notas</h3>
+        <canvas id="dist" />
+      </div>
+
+      <div>
+        <h3>Evolução da média</h3>
+        <canvas id="evo" />
+      </div>
+    </div>
   </div>
 </section>
 
@@ -588,7 +662,7 @@ function RankingExpandivel({
           <h2 className="section-title">Comentários recentes</h2>
           <div className="comentarios-grid">
             {[...comentariosPos, ...comentariosNeg].map((c, i) => (
-         <div
+    <div
   key={i}
   className={`comentario-card ${
     c.score >= 4
@@ -598,35 +672,44 @@ function RankingExpandivel({
       : "comentario-neutral"
   }`}
 >
-  {/* HEADER */}
-  <div className="comentario-header">
-    <span className="comentario-status">
-      {c.score >= 4 && "▲ Positivo"}
-      {c.score <= 2 && "▼ Negativo"}
-      {c.score === 3 && "Neutro"}
-    </span>
-  </div>
+  {/* TOPO: SERVIÇO + NOTA */}
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: 12,
+    }}
+  >
+    <h4 className="comentario-servico">{c.servico}</h4>
 
-  {/* SERVIÇO */}
-  <h4 className="comentario-servico">
-    {c.servico}
-  </h4>
+    <div
+      style={{
+        fontSize: "0.85rem",
+        fontWeight: 700,
+        color: "#111827",
+        whiteSpace: "nowrap",
+      }}
+    >
+      ★ {c.score.toFixed(1)}
+    </div>
+  </div>
 
   {/* SETOR */}
-  <div className="comentario-setor">
-    {c.setores}
-  </div>
+  <div className="comentario-setor">{c.setores}</div>
 
   {/* TEXTO */}
-  <p className="comentario-texto">
-    {c.comment}
-  </p>
+  <p className="comentario-texto">{c.comment}</p>
 
-  {/* AVALIADOR */}
-  <div className="comentario-autor">
-    Avaliado por <strong>{c.cidadao || "Anônimo"}</strong>
-  </div>
+  {/* AUTOR */}
+<div className="comentario-autor">
+  Avaliado por <strong>{ c. cidadao || "Anônimo"}</strong>
+  <span style={{ margin: "0 6px", opacity: 0.5 }}>•</span>
+  {new Date(c.created_at).toLocaleDateString("pt-BR")}
 </div>
+
+</div>
+
 
             ))}
           </div>

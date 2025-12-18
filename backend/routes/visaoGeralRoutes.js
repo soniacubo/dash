@@ -492,7 +492,71 @@ router.get("/indicadores/taxa-resolucao", async (req, res) => {
   }
 });
 
-/* =============== MÉDIA DIÁRIA DE SOLICITAÇÕES =============== */
+// ================= BAIRROS - TOP + EVOLUÇÃO =================
+
+/* ================= BAIRROS - TOP + EVOLUÇÃO ================= */
+
+router.get("/visao-geral/bairros-top6", async (req, res) => {
+  try {
+    // ==============================
+    // TOP 6 BAIRROS (ranking geral)
+    // ==============================
+    const [bairros] = await db.query(
+      `
+      SELECT
+        nb.title AS bairro,
+        COUNT(*) AS total
+      FROM jp_conectada.solicitations s
+      JOIN jp_conectada.citizens c
+        ON c.id = s.citizen_id
+      JOIN jp_conectada.neighborhoods nb
+        ON nb.id = c.neighborhood_id
+      WHERE s.tenant_id = ?
+        AND s.deleted_at IS NULL
+        AND c.neighborhood_id IS NOT NULL
+        AND nb.active = 1
+      GROUP BY nb.id, nb.title
+      ORDER BY total DESC
+      LIMIT 6
+      `,
+      [TENANT_ID]
+    );
+
+    // ==============================
+    // EVOLUÇÃO MENSAL POR BAIRRO (ANO ATUAL)
+    // ==============================
+    const [meses] = await db.query(
+      `
+      SELECT
+        MONTH(s.created_at) AS mes,
+        nb.title AS bairro,
+        COUNT(*) AS total
+      FROM jp_conectada.solicitations s
+      JOIN jp_conectada.citizens c
+        ON c.id = s.citizen_id
+      JOIN jp_conectada.neighborhoods nb
+        ON nb.id = c.neighborhood_id
+      WHERE s.tenant_id = ?
+        AND s.deleted_at IS NULL
+        AND c.neighborhood_id IS NOT NULL
+        AND nb.active = 1
+        AND YEAR(s.created_at) = YEAR(CURDATE())
+      GROUP BY mes, nb.id, nb.title
+      ORDER BY mes ASC
+      `,
+      [TENANT_ID]
+    );
+
+    res.json({ bairros, meses });
+  } catch (err) {
+    console.error("Erro /visao-geral/bairros-top6:", err);
+    res.status(500).json({ error: "Erro ao carregar bairros" });
+  }
+});
+
+
+
+
 
 /* =============== MÉDIA DIÁRIA DE SOLICITAÇÕES =============== */
 router.get("/visao-geral/media-diaria", async (req, res) => {

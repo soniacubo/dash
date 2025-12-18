@@ -441,7 +441,7 @@ export default function Visaogeral() {
     async function carregarTopBairros() {
       try {
         const r = await fetch(
-          `${API_BASE_URL}/solicitacoes/bairros-top6`,
+          `${API_BASE_URL}/visao-geral/bairros-top6`,
           { signal: ac.signal }
         );
         if (!r.ok) return;
@@ -1196,7 +1196,7 @@ export default function Visaogeral() {
                 taxaResolucaoCaixa
                   ?.iniciadas || 0
               )}{" "}
-              || Respondidas:{" "}
+              -- Respondidas:{" "}
               {fmt.format(
                 taxaResolucaoCaixa
                   ?.respondidas || 0

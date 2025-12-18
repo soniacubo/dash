@@ -97,15 +97,18 @@ type ParadasSetor = {
   sector_id: number | null;
   setor: string | null;
   total_paradas: number;
-  media_dias_paradas: number;
+  media_dias_parado: number; // 👈 nome correto
 };
+
+
 
 type ParadasServico = {
   service_id: number | null;
   servico: string | null;
   total_paradas: number;
-  media_dias_paradas: number;
+  media_dias_parado: number; // 👈 nome igual ao backend
 };
+
 
 /* ============================================================
    HELPERS
@@ -1114,10 +1117,14 @@ useEffect(() => {
   ============================================================ */
 
   function atualizarGraficoParadasSetor(dados: ParadasSetor[]) {
-    const canvas = paradasSetorCanvasRef.current;
-    if (!canvas) return;
+  const canvas = paradasSetorCanvasRef.current;
+  if (!canvas) return;
 
-    const top = (dados || []).slice(0, 5); // TOP 5
+  const ordenado = [...(dados || [])]
+    .sort((a, b) => (b.total_paradas || 0) - (a.total_paradas || 0));
+
+  const top = ordenado.slice(0, 5); // TOP 5 REAL
+
 
     if (!top || top.length === 0) {
       if (paradasSetorChartRef.current) {
@@ -1130,7 +1137,10 @@ useEffect(() => {
 
     const labels = top.map((d) => d.setor || "—");
     const values = top.map((d) => d.total_paradas || 0);
-    const medias = top.map((d) => d.media_dias_paradas || 0);
+const medias = top.map(
+  (d) => Number(d.media_dias_parado) || 0
+);
+
 
     if (paradasSetorChartRef.current) {
       paradasSetorChartRef.current.data.labels = labels;
@@ -1167,7 +1177,8 @@ useEffect(() => {
               label: (ctx) => {
                 const idx = ctx.dataIndex;
                 const total = values[idx] || 0;
-                const mediaDias = medias[idx] || 0;
+              const mediaDias = medias[idx] || 0;
+
                 return `${ctx.label}: ${fmtNumero.format(
                   total
                 )} em aberto • ${fmtNumero.format(
@@ -1221,7 +1232,10 @@ useEffect(() => {
 
     const labels = top.map((d) => d.servico || "—");
     const values = top.map((d) => d.total_paradas || 0);
-    const medias = top.map((d) => d.media_dias_paradas || 0);
+const medias = top.map(
+  (d) => Number(d.media_dias_parado) || 0
+);
+
 
     if (paradasServicoChartRef.current) {
       paradasServicoChartRef.current.data.labels = labels;
@@ -1556,7 +1570,7 @@ useEffect(() => {
             className="user-stat-card"
             style={{ backgroundColor: "#D1FAE5" }}
           >
-            <span className="kpi-title">Concluídas (inclui transferidas)</span>
+            <span className="kpi-title">Concluídas</span>
             <strong className="kpi-value">
               {loadingResumo ? "—" : fmtNumero.format(concluidas)}
             </strong>
@@ -1566,6 +1580,62 @@ useEffect(() => {
           </div>
         </div>
       </section>
+
+
+
+      {/* KPIs DE SLA (ABERTAS x CONCLUÍDAS) */}
+      <section className="dash-section">
+    <div className="section-title-wrapper">
+      <TitleWithTooltip tooltip="Indicadores de desempenho operacional e tempo médio das solicitações, considerando o período e filtros selecionados.">
+  <h3 className="section-title">
+    Indicadores de SLA
+  </h3>
+</TitleWithTooltip>
+
+<p className="section-subtitle">
+  Tempos médios em dias • {descricaoFiltroAplicado}
+</p>
+
+
+          <div className="card-deck stats-cards" style={{ marginBottom: 4 }}>
+            {/* Tempo médio em aberto */}
+            <div className="user-stat-card">
+              <span className="kpi-title">
+                ⏱️     Tempo médio que {loadingParadas ? "—" : fmtNumero.format(totalParadas)} solicitações estão em aberto
+              </span>
+              <strong className="kpi-value">
+                {loadingParadas
+                  ? "—"
+                  : `${fmtNumero.format(mediaDiasParadas)} dias`}
+              </strong>
+              <div className="kpi__sub">
+             
+              </div>
+            </div>
+
+
+            {/* Tempo médio de conclusão */}
+            <div className="user-stat-card">
+              <span className="kpi-title">⏳ Tempo médio para resolver {loadingTempo
+                  ? "—"
+                  : fmtNumero.format(totalConcluidasPeriodo)} solicitações</span>
+              <strong className="kpi-value">
+                {loadingTempo
+                  ? "—"
+                  : `${fmtNumero.format(mediaConclusaoDias)} dias`}
+              </strong>
+              <div className="kpi__sub">
+        
+              </div>
+            </div>
+
+            {/* Total concluídas */}
+   
+          </div>
+        </div>
+      </section>
+
+
 
       {/* STATUS x TOP SERVIÇOS */}
       <section className="dash-section">
@@ -1598,98 +1668,36 @@ useEffect(() => {
 
       {/* EVOLUÇÃO */}
       <section className="dash-section">
-        <div className="ranking-box" style={{ width: "100%" }}>
-          <TitleWithTooltip tooltip="Evolução das solicitações abertas e concluídas (incluindo transferidas), com granularidade ajustada ao tamanho do período.">
-            Evolução no período
-          </TitleWithTooltip>
-          <p style={{ fontSize: ".9rem", color: "#6b7280" }}>
-            Granularidade diária / semanal / mensal • {descricaoFiltroAplicado}
-          </p>
-          <div className="chart-container" style={{ height: 320 }}>
+        <div className="section-title-wrapper">
+         <TitleWithTooltip 
+         tooltip="Evolução das solicitações abertas e concluídas, com granularidade ajustada automaticamente conforme o período selecionado."
+            className="section-title-main">
+    Evolução no período
+
+</TitleWithTooltip>
+ <p className="section-title-sub">
+  Granularidade diária / semanal / mensal • {descricaoFiltroAplicado}
+</p>
+
+          <div className="chart-container" style={{ height: 500 }}>
             <canvas ref={evolucaoCanvasRef} />
-          </div>
-        </div>
-      </section>
-
-      {/* KPIs DE SLA (ABERTAS x CONCLUÍDAS) */}
-      <section className="dash-section">
-        <div className="ranking-box" style={{ width: "100%" }}>
-          <TitleWithTooltip tooltip="Indicadores de tempo médio das solicitações, considerando os filtros aplicados.">
-            Indicadores de SLA
-          </TitleWithTooltip>
-
-          <p style={{ fontSize: ".9rem", color: "#6b7280", marginBottom: 12 }}>
-            Tempos médios em dias • {descricaoFiltroAplicado}
-          </p>
-
-          <div className="card-deck stats-cards" style={{ marginBottom: 4 }}>
-            {/* Tempo médio em aberto */}
-            <div className="user-stat-card">
-              <span className="kpi-title">
-                Tempo médio das solicitações em aberto
-              </span>
-              <strong className="kpi-value">
-                {loadingParadas
-                  ? "—"
-                  : `${fmtNumero.format(mediaDiasParadas)} dias`}
-              </strong>
-              <div className="kpi__sub">
-                Considerando solicitações com status diferente de concluída ou
-                transferida
-              </div>
-            </div>
-
-            {/* Total em aberto */}
-            <div className="user-stat-card">
-              <span className="kpi-title">Solicitações em aberto</span>
-              <strong className="kpi-value">
-                {loadingParadas ? "—" : fmtNumero.format(totalParadas)}
-              </strong>
-              <div className="kpi__sub">
-                Abertas, em espera ou respondidas no período filtrado
-              </div>
-            </div>
-
-            {/* Tempo médio de conclusão */}
-            <div className="user-stat-card">
-              <span className="kpi-title">Tempo médio até a conclusão</span>
-              <strong className="kpi-value">
-                {loadingTempo
-                  ? "—"
-                  : `${fmtNumero.format(mediaConclusaoDias)} dias`}
-              </strong>
-              <div className="kpi__sub">
-                Considerando apenas solicitações concluídas no período
-              </div>
-            </div>
-
-            {/* Total concluídas */}
-            <div className="user-stat-card">
-              <span className="kpi-title">Solicitações concluídas</span>
-              <strong className="kpi-value">
-                {loadingTempo
-                  ? "—"
-                  : fmtNumero.format(totalConcluidasPeriodo)}
-              </strong>
-              <div className="kpi__sub">
-                Total com data de conclusão dentro do período
-              </div>
-            </div>
           </div>
         </div>
       </section>
 
       {/* PROCESSOS EM ABERTO POR SETOR / SERVIÇO (TOP 5 + BOTÃO) */}
       <section className="dash-section">
-        <div className="ranking-box" style={{ width: "100%" }}>
-          <TitleWithTooltip tooltip="Distribuição das solicitações em aberto por setor e por serviço, indicando volume e tempo médio parado.">
-            Solicitações em aberto por setor e serviço
-          </TitleWithTooltip>
+     <div className="section-title-wrapper">
+          <TitleWithTooltip tooltip="Distribuição das solicitações em aberto agrupadas por setor e por serviço, considerando apenas solicitações não concluídas ou transferidas.">
+  <h3 className="section-title">
+    Solicitações em aberto por setor e serviço
+  </h3>
+</TitleWithTooltip>
 
-          <p style={{ fontSize: ".9rem", color: "#6b7280", marginBottom: 12 }}>
-            Status diferente de concluída ou transferida •{" "}
-            {descricaoFiltroAplicado}
-          </p>
+<p className="section-subtitle">
+  {descricaoFiltroAplicado}
+</p>
+
 
           <div className="section-content-flex">
             {/* TOP 5 SETORES */}
@@ -1777,7 +1785,7 @@ useEffect(() => {
               style={{
                 fontSize: ".85rem",
                 color: "#6b7280",
-                textAlign: "right",
+                textAlign: "center",
               }}
             >
               <div>
@@ -1932,9 +1940,10 @@ useEffect(() => {
                     <td style={{ textAlign: "right" }}>
                       {fmtNumero.format(row.total_paradas || 0)}
                     </td>
-                    <td style={{ textAlign: "right" }}>
-                      {fmtNumero.format(row.media_dias_paradas || 0)}
-                    </td>
+                   <td style={{ textAlign: "right" }}>
+  {fmtNumero.format(Number(row.media_dias_parado) || 0)}
+</td>
+
                   </tr>
                 ))
               )}
@@ -1980,9 +1989,10 @@ useEffect(() => {
                     <td style={{ textAlign: "right" }}>
                       {fmtNumero.format(row.total_paradas || 0)}
                     </td>
-                    <td style={{ textAlign: "right" }}>
-                      {fmtNumero.format(row.media_dias_paradas || 0)}
-                    </td>
+                   <td style={{ textAlign: "right" }}>
+  {fmtNumero.format(Number(row.media_dias_parado) || 0)}
+</td>
+
                   </tr>
                 ))
               )}

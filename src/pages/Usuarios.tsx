@@ -642,9 +642,9 @@ useEffect(() => {
             Indicadores por Período
           </TitleWithTooltip>
 
-          <p className="section-title-sub">
+          <p className="section-title-sub"> <p> 
             Atividade de despacho e ranking de servidores dentro do período selecionado.
-          </p>
+          </p></p>
         </div>
 
         {/* ============================================================ */}

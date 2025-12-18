@@ -8,6 +8,10 @@ const { TENANT_ID } = require("../utils/constants");
 const { dateRangeForYear, formatDurationFromMinutes, withCache } = require("../utils/helpers");
 
 const router = express.Router();
+function isValid(v) {
+  return v !== undefined && v !== null && v !== "" && v !== "0" && v !== "null";
+}
+
 
 /* ============================================================
    HELPERS
@@ -363,6 +367,70 @@ router.get("/solicitacoes/paradas", async (req, res) => {
     res.status(500).json({ error: "Erro ao buscar paradas" });
   }
 });
+
+
+// routes/solicitacoesRoutes.js
+
+router.get("/paradas-por-setor", async (req, res) => {
+  try {
+    const { inicio, fim, setor, servico } = req.query;
+
+    let where = `
+      s.tenant_id = ?
+      AND s.deleted_at IS NULL
+      AND s.status NOT IN (1, 4)
+    `;
+
+    const params = [TENANT_ID];
+
+    if (inicio && fim) {
+      where += " AND DATE(s.created_at) BETWEEN ? AND ?";
+      params.push(inicio, fim);
+    }
+
+    if (setor) {
+      where += `
+        AND EXISTS (
+          SELECT 1
+          FROM jp_conectada.service_sector ss
+          WHERE ss.service_id = s.service_id
+            AND ss.sector_id = ?
+        )
+      `;
+      params.push(setor);
+    }
+
+    if (servico) {
+      where += " AND s.service_id = ?";
+      params.push(servico);
+    }
+
+    const [rows] = await db.query(
+      `
+      SELECT
+        sec.id AS sector_id,
+        sec.name AS setor,
+        COUNT(*) AS total_paradas,
+        AVG(DATEDIFF(NOW(), s.created_at)) AS media_dias_paradas
+      FROM jp_conectada.solicitacoes s
+      JOIN jp_conectada.service_sector ss
+        ON ss.service_id = s.service_id
+      JOIN jp_conectada.sectors sec
+        ON sec.id = ss.sector_id
+      WHERE ${where}
+      GROUP BY sec.id, sec.name
+      ORDER BY total_paradas DESC
+      `,
+      params
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro paradas por setor:", err);
+    res.status(500).json({ error: "Erro paradas por setor" });
+  }
+});
+
 
 router.get("/solicitacoes/top-servicos", async (req, res) => {
   try {

@@ -45,12 +45,7 @@ export default function Header() {
             Avaliações
           </NavLink>
 
-          <NavLink
-            to="/agendamentos"
-            className={({ isActive }) => `nav-item${isActive ? " active" : ""}`}
-          >
-            Agendamentos
-          </NavLink>
+          
 
         </div>
       </nav>
